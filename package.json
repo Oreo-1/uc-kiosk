@@ -1,0 +1,25 @@
+{
+  "name": "uc-kiosk",
+  "version": "1.0.0",
+  "description": "kiosk application for uc canteen",
+  "homepage": "https://github.com/Oreo-1/uc-kiosk#readme",
+  "bugs": {
+    "url": "https://github.com/Oreo-1/uc-kiosk/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Oreo-1/uc-kiosk.git"
+  },
+  "license": "MIT",
+  "author": "kel-6",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "node kiosk-app/server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "sqlite3": "^5.1.7"
+  }
+}
