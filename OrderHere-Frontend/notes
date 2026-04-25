@@ -1,0 +1,1 @@
+localStorage.removeItem("orderType"); at some point in the page if needed

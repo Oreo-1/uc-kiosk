@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -ms-overflow-style: none; scrollbar-width: none; }
+    *::-webkit-scrollbar { display: none; }
+
+    body {
+      font-family: 'Montserrat', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: var(--primary-gradient);
+    }
+
+    .page {
+      width: 900px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 40px 48px;
+      gap: 0;
+    }
+
+    /* ── Card ── */
+    .card {
+      width: 100%;
+      background: #f3f4f6;
+      border-radius: 24px;
+      padding: 36px 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+    }
+
+    /* ── Header ── */
+    .card-title {
+      font-size: 32px;
+      font-weight: 800;
+      color: #1a1a1a;
+      text-align: center;
+      margin-bottom: 6px;
+    }
+
+    .card-subtitle {
+      font-size: 14px;
+      color: #6b7280;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .card-antrian {
+      font-size: 18px;
+      font-weight: 800;
+      color: #1a1a1a;
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    /* ── Tunai illustration ── */
+    .tunai-img {
+      width: 280px;
+      height: 220px;
+      object-fit: contain;
+      margin-bottom: 28px;
+    }
+
+    /* ── QRIS code area ── */
+    .qris-wrap {
+      width: 100%;
+      background: #4b5563;
+      border-radius: 16px;
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 28px;
+      overflow: hidden;
+      max-width: 380px;
+    }
+
+    .qris-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .qris-placeholder {
+      color: #9ca3af;
+      font-size: 13px;
+      font-weight: 600;
+      text-align: center;
+      padding: 20px;
+    }
+
+    /* ── Summary row ── */
+    .summary {
+      width: 100%;
+      background: #d9d9d9;
+      border-radius: 14px;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .summary-col { display: flex; flex-direction: column; gap: 4px; }
+
+    .summary-label {
+      font-size: 13px;
+      color: #6b7280;
+      font-weight: 500;
+    }
+
+    .summary-value {
+      font-size: 16px;
+      font-weight: 800;
+      color: #1a1a1a;
+    }
+
+    .summary-col.right { text-align: right; }
+
+    /* ── Bottom link ── */
+    .ubah-btn {
+      margin-top: 28px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      background: none;
+      border: none;
+      transition: opacity 0.15s;
+      align-self: flex-start;
+    }
+    .ubah-btn:hover { opacity: 0.75; }
+  </style>
+  <link rel="stylesheet" href="main.css" />
+</head>
+<body>
+<div class="page">
+
+  <div class="card">
+    <p class="card-title" id="card-title">—</p>
+    <p class="card-subtitle" id="card-subtitle">—</p>
+    <p class="card-antrian" id="card-antrian">No. Antrian : —</p>
+
+    <!-- Tunai illustration (shown for tunai) -->
+    <img class="tunai-img" id="tunai-img"
+      src="assets/review-order/tunai-illustration.svg"
+      onerror="this.style.display='none'"
+      alt="Tunai" style="display:none;">
+
+    <!-- QRIS code (shown for qris) -->
+    <div class="qris-wrap" id="qris-wrap" style="display:none;">
+      <img src="assets/payment/qris.png"
+        onerror="this.outerHTML='<p class=\'qris-placeholder\'>QRIS</p>'"
+        alt="QRIS">
+    </div>
+
+    <!-- Order summary -->
+    <div class="summary">
+      <div class="summary-col">
+        <span class="summary-label">Total Item</span>
+        <span class="summary-value" id="summary-items">—</span>
+      </div>
+      <div class="summary-col right">
+        <span class="summary-label">Total Harga</span>
+        <span class="summary-value" id="summary-total">Rp. 0</span>
+      </div>
+    </div>
+  </div>
+
+  <button class="ubah-btn" onclick="window.history.back()">
+    ◀ Ubah Opsi Pembayaran
+  </button>
+
+</div>
+
+<script>
+  const method   = sessionStorage.getItem('paymentMethod') || 'tunai';
+  const cart     = JSON.parse(sessionStorage.getItem('cart') || '[]');
+  const antrian  = sessionStorage.getItem('antrian') || '—';
+
+  // ── Header ──────────────────────────────────────────
+  if (method === 'qris') {
+    document.getElementById('card-title').textContent    = 'Scan QRIS';
+    document.getElementById('card-subtitle').textContent = '*Scan melalui aplikasi bank atau e-wallet';
+    document.getElementById('qris-wrap').style.display  = '';
+  } else {
+    document.getElementById('card-title').textContent    = 'Tunai';
+    document.getElementById('card-subtitle').textContent = '*Bayar langsung di kasir';
+    document.getElementById('tunai-img').style.display  = '';
+  }
+
+  document.getElementById('card-antrian').textContent = `No. Antrian : ${antrian}`;
+
+  // ── Summary ─────────────────────────────────────────
+  function formatRp(n) {
+    return 'Rp. ' + n.toLocaleString('id-ID');
+  }
+
+  let total = 0;
+  cart.forEach(i => { total += (i.basePrice + i.addonAmt) * i.qty; });
+
+  // item names summary — show first item + "& X lainnya" if more
+  let itemLabel = '—';
+  if (cart.length === 1) {
+    itemLabel = cart[0].qty > 1 ? `${cart[0].name} x${cart[0].qty}` : cart[0].name;
+  } else if (cart.length > 1) {
+    itemLabel = `${cart[0].name} & ${cart.length - 1} lainnya`;
+  }
+
+  document.getElementById('summary-items').textContent = itemLabel;
+  document.getElementById('summary-total').textContent = formatRp(total);
+</script>
+</body>
+</html>
