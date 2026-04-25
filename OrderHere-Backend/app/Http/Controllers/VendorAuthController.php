@@ -18,7 +18,7 @@ class VendorAuthController extends Controller
      */
     public function register(Request $request)
     {
-        // Validate input (pattern dari AuthController)
+        // Validate input
         $validator = Validator::make($request->all(), [
             'name'           => 'required|string|max:45',
             'phone_number'   => 'required|string|max:20|unique:vendor,phone_number',
@@ -67,20 +67,20 @@ class VendorAuthController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Registrasi gagal. Silakan coba lagi.',
-                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error.'
+                'error' => config('app.debug') === true ? $e->getMessage() : 'Internal server error.'
             ], 500);
         }
     }
 
     /**
-     * Login vendor
+     * Login vendor - Pakai NAME + PASSWORD
      * POST /api/v1/vendor/login
      */
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'phone_number' => 'required|string',
-            'password'     => 'required|string',
+            'name'       => 'required|string|max:45',  // ✅ Login pakai name
+            'password'   => 'required|string',
         ]);
 
         if ($validator->fails()) {
@@ -91,13 +91,13 @@ class VendorAuthController extends Controller
         }
 
         try {
-            // ✅ MANUAL QUERY ke tabel vendor (bukan Auth::attempt yang query ke 'users')
-            $vendor = Vendor::where('phone_number', $request->phone_number)->first();
+            // ✅ Query ke tabel vendor berdasarkan NAME (bukan phone_number)
+            $vendor = Vendor::where('name', $request->name)->first();
 
             if (!$vendor || !Hash::check($request->password, $vendor->password)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Nomor telepon atau password salah.'
+                    'message' => 'Nama vendor atau password salah.'
                 ], 401);
             }
 
@@ -115,14 +115,14 @@ class VendorAuthController extends Controller
                     ],
                     'token' => $token,
                 ]
-            ]);
+            ], 200);
 
         } catch (Throwable $e) {
             Log::error('Vendor login error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Login gagal.',
-                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error.'
+                'error' => config('app.debug') === true ? $e->getMessage() : 'Internal server error.'
             ], 500);
         }
     }
@@ -140,14 +140,14 @@ class VendorAuthController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Logout berhasil.'
-            ]);
+            ], 200);
 
         } catch (Throwable $e) {
             Log::error('Vendor logout error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Logout gagal.',
-                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error.'
+                'error' => config('app.debug') === true ? $e->getMessage() : 'Internal server error.'
             ], 500);
         }
     }
@@ -170,6 +170,6 @@ class VendorAuthController extends Controller
         return response()->json([
             'success' => true,
             'data' => $vendor,
-        ]);
+        ], 200);
     }
 }
