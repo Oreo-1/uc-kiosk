@@ -185,66 +185,45 @@ class FoodController extends Controller
                 return response()->json(['success' => false, 'message' => 'Food not found.'], 404);
             }
 
-            // ✅ STEP 1: Ambil semua input, tapi filter yang benar-benar bernilai (bukan empty string)
-            $rawInputs = $request->only([
-                'vendor_id', 'name', 'type', 'price', 'description', 
-                'estimated_time', 'flavor_attribute', 'active'
+            // ✅ Helper: Ambil nilai hanya jika field benar-benar diisi (bukan empty string)
+            $getIfFilled = fn($key) => $request->filled($key) ? $request->input($key) : null;
+
+            // ✅ Validasi: Gunakan nullable + custom rules untuk handle form-data quirks
+            $validated = $request->validate([
+                'vendor_id'        => ['nullable', 'integer', 'exists:vendor,id'],
+                'name'             => ['nullable', 'string', 'max:45', Rule::unique('food', 'name')->ignore($food->id)],
+                'type'             => ['nullable', Rule::in(['FOOD', 'DRINK', 'SNACK', 'PRASMANAN'])],
+                'price'            => ['nullable', 'numeric', 'min:0'],
+                'description'      => ['nullable', 'string', 'max:255'],
+                'image'            => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:2048'],
+                'estimated_time'   => ['nullable', 'integer', 'min:1'],
+                'flavor_attribute' => ['nullable', Rule::in(['SENANG', 'SEDIH', 'MARAH', 'DATAR'])],
+                'active'           => ['nullable', 'boolean'], // ✅ Laravel handle "1","0",true,false
             ]);
 
-            // ✅ STEP 2: Filter: hapus key yang valuenya empty string atau null
-            $filtered = array_filter($rawInputs, fn($v) => $v !== null && $v !== '' && $v !== []);
+            // ✅ Filter: Hanya ambil field yang benar-benar diisi (hindari empty string overwrite)
+            $updates = array_filter($validated, fn($v) => $v !== null && $v !== '');
 
-            // ✅ STEP 3: Validasi HANYA field yang benar-benar ada di $filtered
-            $rules = [];
-            if (isset($filtered['vendor_id'])) {
-                $rules['vendor_id'] = ['required', 'integer', 'exists:vendor,id'];
-            }
-            if (isset($filtered['name'])) {
-                $rules['name'] = ['required', 'string', 'max:45', Rule::unique('food', 'name')->ignore($food->id)];
-            }
-            if (isset($filtered['type'])) {
-                $rules['type'] = ['required', Rule::in(['FOOD', 'DRINK', 'SNACK', 'PRASMANAN'])];
-            }
-            if (isset($filtered['price'])) {
-                $rules['price'] = ['required', 'numeric', 'min:0'];
-            }
-            if (isset($filtered['description'])) {
-                $rules['description'] = ['nullable', 'string', 'max:255'];
-            }
-            if (isset($filtered['estimated_time'])) {
-                $rules['estimated_time'] = ['required', 'integer', 'min:1'];
-            }
-            if (isset($filtered['flavor_attribute'])) {
-                $rules['flavor_attribute'] = ['nullable', Rule::in(['SENANG', 'SEDIH', 'MARAH', 'DATAR'])];
-            }
-            if (isset($filtered['active'])) {
-                $rules['active'] = ['nullable', 'boolean'];
-            }
-
-            $validated = $request->validate($rules);
-
-            // ✅ STEP 4: Handle boolean 'active' khusus form-data
-            if (isset($validated['active'])) {
-                $val = $validated['active'];
-                $validated['active'] = match (strtolower(strval($val))) {
-                    'true', '1', 'on', 1, true => true,
-                    'false', '0', 'off', 0, false => false,
-                    default => filter_var($val, FILTER_VALIDATE_BOOLEAN),
-                };
-            }
-
-            // ✅ STEP 5: Handle image upload (form-data only)
+            // ✅ Handle image upload (form-data only)
             if ($request->hasFile('image')) {
-                $request->validate(['image' => ['image', 'mimes:jpeg,png,jpg,gif,webp', 'max:2048']]);
-                
                 if ($food->image && Storage::disk('public')->exists($food->image)) {
                     Storage::disk('public')->delete($food->image);
                 }
-                $validated['image'] = $request->file('image')->store('foods', 'public');
+                $updates['image'] = $request->file('image')->store('foods', 'public');
             }
 
-            // ✅ STEP 6: Jika tidak ada yang diupdate, return early
-            if (empty($validated)) {
+            // ✅ Handle boolean 'active' untuk form-data (convert string "true"/"false")
+            if (array_key_exists('active', $updates)) {
+                $val = $updates['active'];
+                $updates['active'] = match (strtolower($val)) {
+                    'true', '1', 1 => true,
+                    'false', '0', 0 => false,
+                    default => (bool) $val,
+                };
+            }
+
+            // ✅ Jika tidak ada field yang diupdate, return success tanpa perubahan
+            if (empty($updates)) {
                 return response()->json([
                     'success' => true,
                     'message' => 'No changes to update.',
@@ -252,8 +231,8 @@ class FoodController extends Controller
                 ], 200);
             }
 
-            // ✅ STEP 7: Eksekusi update
-            $food->update($validated);
+            // ✅ Eksekusi update
+            $food->update($updates);
 
             return response()->json([
                 'success' => true,
@@ -264,7 +243,7 @@ class FoodController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['success' => false, 'message' => 'Validation failed.', 'errors' => $e->errors()], 422);
         } catch (\Throwable $e) {
-            \Log::error('Food update failed:', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            \Log::error('Food update failed:', ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => 'Update failed.', 'error' => config('app.debug') ? $e->getMessage() : 'Internal server error.'], 500);
         }
     }
