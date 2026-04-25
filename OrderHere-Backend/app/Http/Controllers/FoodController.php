@@ -39,11 +39,10 @@ class FoodController extends Controller
             $perPage = $request->get('per_page', 10);
             $foods = $query->paginate($perPage);
 
-            // ✅ Response langsung dengan data foods (tanpa nesting berlebihan)
             return response()->json([
                 'success' => true,
                 'message' => 'Foods retrieved successfully.',
-                'data' => $foods->items(), // ✅ Langsung array data, bukan object pagination
+                'data' => $foods->items(),
                 'pagination' => [
                     'current_page' => $foods->currentPage(),
                     'per_page' => $foods->perPage(),
@@ -56,13 +55,13 @@ class FoodController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Database error occurred.',
-                'error' => config('app.debug') ? $e->getMessage() : 'Silakan hubungi administrator.'
+                'error' => config('app.debug') === true ? $e->getMessage() : 'Silakan hubungi administrator.'
             ], 500);
         } catch (Throwable $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Internal server error.',
-                'error' => config('app.debug') ? $e->getMessage() : 'Terjadi kesalahan tidak terduga.'
+                'error' => config('app.debug') === true ? $e->getMessage() : 'Terjadi kesalahan tidak terduga.'
             ], 500);
         }
     }
@@ -74,8 +73,8 @@ class FoodController extends Controller
     public function store(Request $request)
     {
         try {
+            // ✅ Validasi TANPA vendor_id dari client
             $validated = $request->validate([
-                'vendor_id'        => ['required', 'integer', 'exists:vendor,id'],
                 'name'             => ['required', 'string', 'max:45', 'unique:food,name'],
                 'type'             => ['required', Rule::in(['FOOD', 'DRINK', 'SNACK', 'PRASMANAN'])],
                 'price'            => ['required', 'numeric', 'min:0'],
@@ -86,23 +85,20 @@ class FoodController extends Controller
                 'active'           => ['nullable', 'boolean'],
             ]);
 
-            // Handle image upload
+            // ✅ Handle image upload
             if ($request->hasFile('image')) {
                 $validated['image'] = $request->file('image')->store('foods', 'public');
             }
 
-            // Convert boolean to tinyint (0/1)
-            if (array_key_exists('active', $validated)) {
-                $validated['active'] = $validated['active'] ? 1 : 0;
-            }
+            // ✅ TAMBAHKAN vendor_id dari authenticated user (bukan dari client!)
+            $validated['vendor_id'] = $request->user()->id;
 
             $food = Food::create($validated);
 
-            // ✅ Tampilkan data yang BARU SAJA masuk + load relasi vendor
             return response()->json([
                 'success' => true,
                 'message' => 'Food created successfully.',
-                'data' => $food->load('vendor') // ✅ Data lengkap dengan relasi
+                'data' => $food->load('vendor')
             ], 201);
 
         } catch (ValidationException $e) {
@@ -111,32 +107,12 @@ class FoodController extends Controller
                 'message' => 'Validation failed.',
                 'errors' => $e->errors()
             ], 422);
-        } catch (QueryException $e) {
-            // Handle duplicate entry, foreign key constraint, etc.
-            if (str_contains($e->getMessage(), 'Duplicate entry')) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Food with this name already exists.',
-                    'error' => config('app.debug') ? $e->getMessage() : null
-                ], 409); // Conflict
-            }
-            if (str_contains($e->getMessage(), 'foreign key constraint')) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Invalid vendor_id. Vendor does not exist.',
-                    'error' => config('app.debug') ? $e->getMessage() : null
-                ], 400);
-            }
-            return response()->json([
-                'success' => false,
-                'message' => 'Database error occurred.',
-                'error' => config('app.debug') ? $e->getMessage() : 'Silakan hubungi administrator.'
-            ], 500);
         } catch (Throwable $e) {
+            \Log::error('Food store failed:', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
-                'message' => 'Internal server error.',
-                'error' => config('app.debug') ? $e->getMessage() : 'Terjadi kesalahan tidak terduga.'
+                'message' => 'Create failed.',
+                'error' => config('app.debug') === true ? $e->getMessage() : 'Internal server error.'
             ], 500);
         }
     }
@@ -148,7 +124,6 @@ class FoodController extends Controller
     public function show(Food $food)
     {
         try {
-            // ✅ Route model binding sudah handle 404 otomatis, tapi kita tambahkan custom response
             if (!$food->exists) {
                 throw new ModelNotFoundException("Food not found");
             }
@@ -156,7 +131,7 @@ class FoodController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Food retrieved successfully.',
-                'data' => $food->load('vendor') // ✅ Langsung tampilkan data food + vendor
+                'data' => $food->load('vendor')
             ], 200);
 
         } catch (ModelNotFoundException $e) {
@@ -169,7 +144,7 @@ class FoodController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Internal server error.',
-                'error' => config('app.debug') ? $e->getMessage() : 'Terjadi kesalahan tidak terduga.'
+                'error' => config('app.debug') === true ? $e->getMessage() : 'Terjadi kesalahan tidak terduga.'
             ], 500);
         }
     }
@@ -181,16 +156,23 @@ class FoodController extends Controller
     public function update(Request $request, Food $food)
     {
         try {
+            // ✅ Cek 404: Food tidak ditemukan
             if (!$food->exists) {
                 return response()->json(['success' => false, 'message' => 'Food not found.'], 404);
             }
 
-            // ✅ Helper: Ambil nilai hanya jika field benar-benar diisi (bukan empty string)
-            $getIfFilled = fn($key) => $request->filled($key) ? $request->input($key) : null;
+            // 🔐 CEK AUTHORIZATION: Hanya vendor pemilik yang bisa update
+            $authenticatedVendor = $request->user();
+            if (!$authenticatedVendor || $food->vendor_id !== $authenticatedVendor->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Forbidden.',
+                    'error' => 'You can only update your own foods.'
+                ], 403);
+            }
 
-            // ✅ Validasi: Gunakan nullable + custom rules untuk handle form-data quirks
+            // ✅ Validasi: Gunakan nullable untuk partial update
             $validated = $request->validate([
-                'vendor_id'        => ['nullable', 'integer', 'exists:vendor,id'],
                 'name'             => ['nullable', 'string', 'max:45', Rule::unique('food', 'name')->ignore($food->id)],
                 'type'             => ['nullable', Rule::in(['FOOD', 'DRINK', 'SNACK', 'PRASMANAN'])],
                 'price'            => ['nullable', 'numeric', 'min:0'],
@@ -198,13 +180,13 @@ class FoodController extends Controller
                 'image'            => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:2048'],
                 'estimated_time'   => ['nullable', 'integer', 'min:1'],
                 'flavor_attribute' => ['nullable', Rule::in(['SENANG', 'SEDIH', 'MARAH', 'DATAR'])],
-                'active'           => ['nullable', 'boolean'], // ✅ Laravel handle "1","0",true,false
+                'active'           => ['nullable', 'boolean'],
             ]);
 
-            // ✅ Filter: Hanya ambil field yang benar-benar diisi (hindari empty string overwrite)
+            // ✅ Filter: Hanya ambil field yang benar-benar diisi
             $updates = array_filter($validated, fn($v) => $v !== null && $v !== '');
 
-            // ✅ Handle image upload (form-data only)
+            // ✅ Handle image upload
             if ($request->hasFile('image')) {
                 if ($food->image && Storage::disk('public')->exists($food->image)) {
                     Storage::disk('public')->delete($food->image);
@@ -212,17 +194,17 @@ class FoodController extends Controller
                 $updates['image'] = $request->file('image')->store('foods', 'public');
             }
 
-            // ✅ Handle boolean 'active' untuk form-data (convert string "true"/"false")
+            // ✅ Handle boolean 'active' untuk form-data
             if (array_key_exists('active', $updates)) {
                 $val = $updates['active'];
-                $updates['active'] = match (strtolower($val)) {
+                $updates['active'] = match (strtolower(strval($val))) {
                     'true', '1', 1 => true,
                     'false', '0', 0 => false,
-                    default => (bool) $val,
+                    default => filter_var($val, FILTER_VALIDATE_BOOLEAN),
                 };
             }
 
-            // ✅ Jika tidak ada field yang diupdate, return success tanpa perubahan
+            // ✅ Jika tidak ada yang diupdate, return early
             if (empty($updates)) {
                 return response()->json([
                     'success' => true,
@@ -240,11 +222,11 @@ class FoodController extends Controller
                 'data' => $food->fresh()->load('vendor')
             ], 200);
 
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             return response()->json(['success' => false, 'message' => 'Validation failed.', 'errors' => $e->errors()], 422);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             \Log::error('Food update failed:', ['error' => $e->getMessage()]);
-            return response()->json(['success' => false, 'message' => 'Update failed.', 'error' => config('app.debug') ? $e->getMessage() : 'Internal server error.'], 500);
+            return response()->json(['success' => false, 'message' => 'Update failed.', 'error' => config('app.debug') === true ? $e->getMessage() : 'Internal server error.'], 500);
         }
     }
 
@@ -255,9 +237,19 @@ class FoodController extends Controller
     public function destroy(Food $food)
     {
         try {
-            // ✅ Cek 404 manual
+            // ✅ Cek 404: Food tidak ditemukan
             if (!$food->exists) {
                 throw new ModelNotFoundException("Food not found");
+            }
+
+            // 🔐 CEK AUTHORIZATION: Hanya vendor pemilik yang bisa delete
+            $authenticatedVendor = request()->user();
+            if (!$authenticatedVendor || $food->vendor_id !== $authenticatedVendor->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Forbidden.',
+                    'error' => 'You can only delete your own foods.'
+                ], 403);
             }
 
             // Clean up associated image
@@ -274,7 +266,7 @@ class FoodController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Food deleted successfully.',
-                'data' => $deletedFood // ✅ Data food yang dihapus
+                'data' => $deletedFood
             ], 200);
 
         } catch (ModelNotFoundException $e) {
@@ -288,19 +280,19 @@ class FoodController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Cannot delete food. It is still referenced in orders.',
-                    'error' => config('app.debug') ? $e->getMessage() : null
+                    'error' => config('app.debug') === true ? $e->getMessage() : null
                 ], 409);
             }
             return response()->json([
                 'success' => false,
                 'message' => 'Database error occurred.',
-                'error' => config('app.debug') ? $e->getMessage() : 'Silakan hubungi administrator.'
+                'error' => config('app.debug') === true ? $e->getMessage() : 'Silakan hubungi administrator.'
             ], 500);
         } catch (Throwable $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Internal server error.',
-                'error' => config('app.debug') ? $e->getMessage() : 'Terjadi kesalahan tidak terduga.'
+                'error' => config('app.debug') === true ? $e->getMessage() : 'Terjadi kesalahan tidak terduga.'
             ], 500);
         }
     }

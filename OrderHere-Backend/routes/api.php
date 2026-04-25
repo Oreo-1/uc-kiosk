@@ -3,33 +3,58 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\FoodController;
+use App\Http\Controllers\VendorAuthController;
 
-// Route::get('/user', function (Request $request) {
-//     return $request->user();
-// })->middleware('auth:sanctum');
+/*
+|--------------------------------------------------------------------------
+| API Routes - OrderHere Backend
+| Base URL: http://localhost/api
+|--------------------------------------------------------------------------
+*/
 
-   // ================= FOOD ROUTES =================
-    // GET    /api/foods           -> index (list with filters)
-    // POST   /api/foods           -> store (create new)
-    // GET    /api/foods/{food}    -> show (detail)
-    // PUT    /api/foods/{food}    -> update
-    // DELETE /api/foods/{food}    -> destroy
+// ================= PUBLIC ROUTES (No Auth Required) =================
+    // GET /api/foods - List all foods with optional filters
+    Route::get('/foods', [FoodController::class, 'index'])->name('foods.index');
+        // Route::get('/foods/{food}', [FoodController::class, 'show'])->name('foods.show')->middleware('auth:sanctum');
+    Route::get('/foods/{food}', [FoodController::class, 'show'])->name('foods.show');
 
-// ================= FOOD ROUTES (Explicit Definition) =================
+        // ================= OPTIONAL: Vendor-Specific Food Routes =================
+    // Get foods belonging to authenticated vendor only
+    Route::get('/vendor/foods', function (Request $request) {
+        return response()->json(
+            $request->user()->foods()->paginate($request->get('per_page', 10))
+        );
+    })->name('vendor.foods.index');
 
-// GET /api/foods - List all foods with optional filters
-Route::get('/foods', [FoodController::class, 'index'])->name('foods.index');
 
-// POST /api/foods - Create new food
-Route::post('/foods', [FoodController::class, 'store'])->name('foods.store');
+// Vendor Authentication
+Route::post('/vendor/login', [VendorAuthController::class, 'login'])->name('vendor.login');
+Route::post('/vendor/register', [VendorAuthController::class, 'register'])->name('vendor.register'); // ⭐ Baru
 
-// GET /api/foods/{food} - Show single food detail
-// ⚠️ Route model binding: Laravel will auto-find Food by {food} = id
-Route::get('/foods/{food}', [FoodController::class, 'show'])->name('foods.show');
+// Note: Logout requires auth, so it's in protected routes below
 
-// PUT/PATCH /api/foods/{food} - Update existing food
-Route::put('/foods/{food}', [FoodController::class, 'update'])->name('foods.update');
-Route::patch('/foods/{food}', [FoodController::class, 'update']); // alias
+// ================= PROTECTED ROUTES (Requires Sanctum Token) =================
 
-// DELETE /api/foods/{food} - Delete food
-Route::delete('/foods/{food}', [FoodController::class, 'destroy'])->name('foods.destroy');
+Route::middleware('auth:sanctum')->group(function () {
+    
+    // Vendor Logout
+    Route::post('/vendor/logout', [VendorAuthController::class, 'logout'])->name('vendor.logout');
+
+    // ================= FOOD ROUTES =================
+    // All food operations require authenticated vendor
+
+    // POST /api/foods - Create new food (vendor only)
+    Route::post('/foods', [FoodController::class, 'store'])->name('foods.store');
+
+    // GET /api/foods/{food} - Show single food detail (public read allowed)
+    // Uncomment middleware below if you want to protect read access too:
+
+    // PUT/PATCH /api/foods/{food} - Update existing food (vendor only)
+    Route::put('/foods/{food}', [FoodController::class, 'update'])->name('foods.update');
+    Route::patch('/foods/{food}', [FoodController::class, 'update']); // alias
+
+    // DELETE /api/foods/{food} - Delete food (vendor only)
+    Route::delete('/foods/{food}', [FoodController::class, 'destroy'])->name('foods.destroy');
+
+
+});
