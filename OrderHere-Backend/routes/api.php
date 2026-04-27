@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\FoodController;
 use App\Http\Controllers\VendorAuthController;
+use App\Http\Controllers\OrderController;
 
 /*
 |--------------------------------------------------------------------------
@@ -26,10 +27,21 @@ use App\Http\Controllers\VendorAuthController;
         );
     })->name('vendor.foods.index');
 
+    // List & Create Orders
+    Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
 
-// Vendor Authentication
-Route::post('/vendor/login', [VendorAuthController::class, 'login'])->name('vendor.login');
-Route::post('/vendor/register', [VendorAuthController::class, 'register'])->name('vendor.register'); // ⭐ Baru
+    // View Single Order
+    Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+
+    // Filter Orders
+    Route::get('/vendors/{vendor_id}/orders', [OrderController::class, 'byVendor'])->name('orders.byVendor');
+    Route::get('/orders/status/{status}', [OrderController::class, 'byStatus'])->name('orders.byStatus');
+
+
+    // Vendor Authentication
+    Route::post('/vendor/login', [VendorAuthController::class, 'login'])->name('vendor.login');
+    Route::post('/vendor/register', [VendorAuthController::class, 'register'])->name('vendor.register'); // ⭐ Baru
 
 // Note: Logout requires auth, so it's in protected routes below
 
@@ -56,5 +68,6 @@ Route::middleware('auth:sanctum')->group(function () {
     // DELETE /api/foods/{food} - Delete food (vendor only)
     Route::delete('/foods/{food}', [FoodController::class, 'destroy'])->name('foods.destroy');
 
+    Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.status.update');
 
 });

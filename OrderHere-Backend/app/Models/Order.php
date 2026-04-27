@@ -11,7 +11,7 @@ class Order extends Model
     // 'order' is a SQL reserved word, but Laravel handles it safely via $table
     protected $table = 'order';
     protected $primaryKey = 'id';
-    public $timestamps = false;
+    public $timestamps = true;
 
     protected $fillable = [
         'vendor_id', 'status', 'queue_number', 'total_price', 'total_estimated'
