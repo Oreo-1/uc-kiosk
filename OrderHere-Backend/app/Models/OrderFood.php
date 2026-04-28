@@ -13,7 +13,7 @@ class OrderFood extends Model
     // Laravel doesn't natively support composite keys. 
     // Use Order::foods() or Food::orders() pivot methods instead.
 
-    protected $fillable = ['food_id', 'order_id', 'quantity', 'total_price', 'notes'];
+    protected $fillable = ['food_id', 'order_id', 'quantity', 'total_price', 'notes', 'parent_food_id'];
 
     protected $casts = [
         'quantity' => 'integer',
@@ -28,5 +28,13 @@ class OrderFood extends Model
     public function food(): BelongsTo
     {
         return $this->belongsTo(Food::class, 'food_id', 'id');
+    }
+
+    /**
+     * The parent food item this addon order-line belongs to.
+     */
+    public function parentFood(): BelongsTo
+    {
+        return $this->belongsTo(Food::class, 'parent_food_id', 'id');
     }
 }
