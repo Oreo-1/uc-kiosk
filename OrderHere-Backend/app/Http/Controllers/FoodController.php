@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Food;
+use App\Models\FoodAddon;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -42,6 +43,64 @@ class FoodController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Foods retrieved successfully.',
+                'data' => $foods->items(),
+                'pagination' => [
+                    'current_page' => $foods->currentPage(),
+                    'per_page' => $foods->perPage(),
+                    'total' => $foods->total(),
+                    'last_page' => $foods->lastPage(),
+                ]
+            ], 200);
+
+        } catch (QueryException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Database error occurred.',
+                'error' => config('app.debug') === true ? $e->getMessage() : 'Silakan hubungi administrator.'
+            ], 500);
+        } catch (Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal server error.',
+                'error' => config('app.debug') === true ? $e->getMessage() : 'Terjadi kesalahan tidak terduga.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Display a listing of foods for a specific vendor.
+     * GET /api/vendors/{vendor_id}/foods
+     */
+    public function byVendor(Request $request, $vendorId)
+    {
+        try {
+            // Check if vendor exists first to give better error message
+            if (!\App\Models\Vendor::where('id', $vendorId)->exists()) {
+                 return response()->json([
+                    'success' => false,
+                    'message' => 'Vendor not found.',
+                ], 404);
+            }
+
+            $query = Food::where('vendor_id', $vendorId)->with('vendor');
+
+            // Optional filters (same as index)
+            if ($request->filled('type')) {
+                $query->where('type', $request->type);
+            }
+            if ($request->filled('search')) {
+                $query->where('name', 'like', '%' . $request->search . '%');
+            }
+            if ($request->filled('active')) {
+                $query->where('active', $request->boolean('active'));
+            }
+
+            $perPage = $request->get('per_page', 10);
+            $foods = $query->paginate($perPage);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Vendor foods retrieved successfully.',
                 'data' => $foods->items(),
                 'pagination' => [
                     'current_page' => $foods->currentPage(),
@@ -131,7 +190,7 @@ class FoodController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Food retrieved successfully.',
-                'data' => $food->load('vendor')
+                'data' => $food->load(['vendor', 'addons'])
             ], 200);
 
         } catch (ModelNotFoundException $e) {
@@ -293,6 +352,86 @@ class FoodController extends Controller
                 'success' => false,
                 'message' => 'Internal server error.',
                 'error' => config('app.debug') === true ? $e->getMessage() : 'Terjadi kesalahan tidak terduga.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Add an addon to a specific food.
+     * POST /api/foods/{food}/addons
+     */
+    public function addAddon(Request $request, Food $food)
+    {
+        try {
+            // ✅ Cek 404
+            if (!$food->exists) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Food not found.'
+                ], 404);
+            }
+
+            // 🔐 Hanya vendor pemilik yang bisa menambahkan addon
+            $authenticatedVendor = $request->user();
+            if (!$authenticatedVendor || $food->vendor_id !== $authenticatedVendor->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Forbidden.',
+                    'error'   => 'You can only manage addons for your own foods.'
+                ], 403);
+            }
+
+            // ✅ Validasi
+            $validated = $request->validate([
+                'addons_id'   => [
+                    'required',
+                    'integer',
+                    'exists:food,id',
+                    function ($attribute, $value, $fail) use ($food) {
+                        if ((int) $value === $food->id) {
+                            $fail('A food cannot be its own addon.');
+                        }
+                    },
+                ],
+                'extra_price' => ['nullable', 'numeric', 'min:0'],
+            ]);
+
+            // Cegah duplikat addon pada food yang sama
+            $exists = FoodAddon::where('food_id', $food->id)
+                               ->where('addons_id', $validated['addons_id'])
+                               ->exists();
+
+            if ($exists) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Addon already added to this food.'
+                ], 409);
+            }
+
+            $addon = FoodAddon::create([
+                'food_id'     => $food->id,
+                'addons_id'   => $validated['addons_id'],
+                'extra_price' => $validated['extra_price'] ?? null,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Addon added successfully.',
+                'data'    => $addon->load('addon')
+            ], 201);
+
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors'  => $e->errors()
+            ], 422);
+        } catch (Throwable $e) {
+            \Log::error('Food addAddon failed:', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to add addon.',
+                'error'   => config('app.debug') === true ? $e->getMessage() : 'Internal server error.'
             ], 500);
         }
     }

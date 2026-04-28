@@ -33,4 +33,10 @@ class Food extends Model
         return $this->belongsToMany(Order::class, 'order_food', 'food_id', 'order_id')
                     ->withPivot('quantity', 'total_price', 'notes');
     }
+
+    public function addons(): BelongsToMany
+    {
+        return $this->belongsToMany(Food::class, 'food_addons', 'food_id', 'addons_id')
+                    ->withPivot('extra_price', 'id as pivot_id');
+    }
 }

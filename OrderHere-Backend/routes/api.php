@@ -16,16 +16,10 @@ use App\Http\Controllers\OrderController;
 // ================= PUBLIC ROUTES (No Auth Required) =================
     // GET /api/foods - List all foods with optional filters
     Route::get('/foods', [FoodController::class, 'index'])->name('foods.index');
-        // Route::get('/foods/{food}', [FoodController::class, 'show'])->name('foods.show')->middleware('auth:sanctum');
     Route::get('/foods/{food}', [FoodController::class, 'show'])->name('foods.show');
 
-        // ================= OPTIONAL: Vendor-Specific Food Routes =================
-    // Get foods belonging to authenticated vendor only
-    Route::get('/vendor/foods', function (Request $request) {
-        return response()->json(
-            $request->user()->foods()->paginate($request->get('per_page', 10))
-        );
-    })->name('vendor.foods.index');
+    // GET /api/vendors/{vendor_id}/foods - List foods for a specific vendor
+    Route::get('/vendors/{vendor_id}/foods', [FoodController::class, 'byVendor'])->name('vendors.foods.index.userview');
 
     // List & Create Orders
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
@@ -52,6 +46,13 @@ Route::middleware('auth:sanctum')->group(function () {
     // Vendor Logout
     Route::post('/vendor/logout', [VendorAuthController::class, 'logout'])->name('vendor.logout');
 
+    // GET /api/vendor/foods - List foods milik vendor yang sedang login
+    Route::get('/vendor/foods', function (Request $request) {
+        return response()->json(
+            $request->user()->foods()->paginate($request->get('per_page', 10))
+        );
+    })->name('vendor.foods.index');
+
     // ================= FOOD ROUTES =================
     // All food operations require authenticated vendor
 
@@ -67,6 +68,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // DELETE /api/foods/{food} - Delete food (vendor only)
     Route::delete('/foods/{food}', [FoodController::class, 'destroy'])->name('foods.destroy');
+
+    // Add addon to food
+    Route::post('/foods/{food}/addons', [FoodController::class, 'addAddon'])->name('foods.addons.store');
 
     Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.status.update');
 
