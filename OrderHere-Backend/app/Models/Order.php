@@ -14,10 +14,11 @@ class Order extends Model
     public $timestamps = true;
 
     protected $fillable = [
-        'vendor_id', 'status', 'queue_number', 'total_price', 'total_estimated'
+        'vendor_id', 'dining_type', 'status', 'queue_number', 'total_price', 'total_estimated'
     ];
 
     protected $casts = [
+        'dining_type' => 'string',
         'queue_number' => 'integer',
         'total_price' => 'decimal:2',
         'total_estimated' => 'integer',
