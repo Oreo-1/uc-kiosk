@@ -284,19 +284,44 @@ class OrderController extends Controller
     }
 
     /**
-     * Get orders by vendor (PUBLIC - for tracking).
-     * GET /api/vendors/{vendor_id}/orders
+     * Get all orders for authenticated vendor (AUTH REQUIRED).
+     * GET /api/vendor/orders
      */
-    public function byVendor(Request $request, $vendor_id)
+    public function myOrders(Request $request)
     {
         try {
+            // 🔐 Pastikan user terautentikasi
+            $authenticatedVendor = $request->user();
+            if (!$authenticatedVendor) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthenticated.',
+                    'error' => 'Please login as vendor first.'
+                ], 401);
+            }
+
             $query = Order::with('foods')
-                ->where('vendor_id', $vendor_id)
+                ->where('vendor_id', $authenticatedVendor->id)
                 ->orderBy('id', 'desc');
 
-            // Optional status filter
+            // Optional filters
             if ($request->filled('status')) {
                 $query->where('status', $request->status);
+            }
+            if ($request->filled('dining_type')) {
+                $query->where('dining_type', $request->dining_type);
+            }
+            if ($request->filled('queue_number')) {
+                $query->where('queue_number', $request->queue_number);
+            }
+            if ($request->filled('date')) {
+                $query->whereDate('created_at', $request->date);
+            }
+            if ($request->filled('start_date') && $request->filled('end_date')) {
+                $query->whereBetween('created_at', [
+                    $request->start_date . ' 00:00:00',
+                    $request->end_date . ' 23:59:59'
+                ]);
             }
 
             $perPage = $request->get('per_page', 10);
@@ -304,7 +329,7 @@ class OrderController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Orders retrieved successfully.',
+                'message' => 'Your orders retrieved successfully.',
                 'data' => $orders->items(),
                 'pagination' => [
                     'current_page' => $orders->currentPage(),
@@ -315,6 +340,7 @@ class OrderController extends Controller
             ], 200);
 
         } catch (Throwable $e) {
+            \Log::error('Get my orders failed:', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve orders.',
@@ -322,7 +348,8 @@ class OrderController extends Controller
             ], 500);
         }
     }
-
+    
+    
     /**
      * Get orders by status (PUBLIC - for customer tracking).
      * GET /api/orders/status/{status}

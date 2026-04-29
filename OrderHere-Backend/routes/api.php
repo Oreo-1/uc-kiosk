@@ -28,9 +28,6 @@ use App\Http\Controllers\OrderController;
     // View Single Order
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
 
-    // Filter Orders
-    Route::get('/vendors/{vendor_id}/orders', [OrderController::class, 'byVendor'])->name('orders.byVendor');
-    Route::get('/orders/status/{status}', [OrderController::class, 'byStatus'])->name('orders.byStatus');
 
 
     // Vendor Authentication
@@ -74,4 +71,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.status.update');
 
+    
+    // Filter Orders
+    Route::get('/vendors/orders', [OrderController::class, 'myOrders'])->name('vendor.orders.my');
+    Route::get('/orders/status/{status}', [OrderController::class, 'byStatus'])->name('orders.byStatus');
 });
