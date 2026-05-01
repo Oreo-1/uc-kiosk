@@ -31,6 +31,9 @@ class OrderController extends Controller
             if ($request->filled('status')) {
                 $query->where('status', $request->status);
             }
+            if ($request->filled('dining_type')) {
+                $query->where('dining_type', $request->dining_type);
+            }
             if ($request->filled('queue_number')) {
                 $query->where('queue_number', $request->queue_number);
             }
@@ -75,16 +78,13 @@ class OrderController extends Controller
      * Store a newly created order from cart data (PUBLIC).
      * POST /api/orders
      */
-    /**
-     * Store a newly created order from cart data (PUBLIC).
-     * POST /api/orders
-     */
     public function store(Request $request)
     {
         try {
             $validated = $request->validate([
-                // ❌ HAPUS vendor_id & queue_number dari input client
-                'foods'        => ['required', 'array', 'min:1'], // Cart items from local storage
+                // ✅ dining_type: wajib, hanya TAKEAWAY atau DINEIN
+                'dining_type'  => ['required', Rule::in(['TAKEAWAY', 'DINEIN'])],
+                'foods'        => ['required', 'array', 'min:1'],
                 'foods.*.food_id'  => ['required', 'integer', 'exists:food,id'],
                 'foods.*.quantity' => ['required', 'integer', 'min:1'],
                 'foods.*.notes'    => ['nullable', 'string', 'max:255'],
@@ -109,7 +109,7 @@ class OrderController extends Controller
             // ✅ STEP 3: Generate queue_number otomatis (reset per hari per vendor)
             $today = now()->startOfDay();
             $todayOrderCount = Order::where('vendor_id', $vendorId)
-                ->whereDate('created_at', $today) // ⚠️ Jika tidak ada created_at, gunakan updated_at atau tambahkan kolom order_date
+                ->whereDate('created_at', $today)
                 ->count();
             $queueNumber = $todayOrderCount + 1;
 
@@ -142,10 +142,11 @@ class OrderController extends Controller
             }
 
             // ✅ STEP 5: Transaction untuk atomic insert
-            $order = DB::transaction(function () use ($vendorId, $queueNumber, $totalPrice, $totalEstimated, $orderFoods) {
+            $order = DB::transaction(function () use ($vendorId, $validated, $queueNumber, $totalPrice, $totalEstimated, $orderFoods) {
                 $order = Order::create([
                     'vendor_id'      => $vendorId,
-                    'status'         => 'ONPROGRESS', // Default status
+                    'dining_type'    => $validated['dining_type'], // ✅ SIMPAN DINING TYPE
+                    'status'         => 'ONPROGRESS',
                     'queue_number'   => $queueNumber,
                     'total_price'    => $totalPrice,
                     'total_estimated'=> $totalEstimated,
@@ -165,7 +166,7 @@ class OrderController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Order placed successfully.',
-                'data' => $order->load(['vendor', 'foods'])
+                'data' => $order->load(['vendor', 'foods']) // ✅ dining_type ikut ter-load
             ], 201);
 
         } catch (ValidationException $e) {
@@ -203,7 +204,6 @@ class OrderController extends Controller
         }
     }
 
-    
     /**
      * Display the specified order (PUBLIC).
      * GET /api/orders/{order}
@@ -369,9 +369,12 @@ class OrderController extends Controller
                 ->where('status', $status)
                 ->orderBy('id', 'desc');
 
-            // Optional vendor filter
+            // Optional filters
             if ($request->filled('vendor_id')) {
                 $query->where('vendor_id', $request->vendor_id);
+            }
+            if ($request->filled('dining_type')) {
+                $query->where('dining_type', $request->dining_type);
             }
 
             $perPage = $request->get('per_page', 10);

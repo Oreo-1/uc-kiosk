@@ -70,6 +70,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/foods/{food}/addons', [FoodController::class, 'addAddon'])->name('foods.addons.store');
 
     Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.status.update');
+    Route::get('/orders/status/{status}', [OrderController::class, 'byStatus'])->name('orders.byStatus'); // Tambahan untuk filter berdasarkan status tapi hrs per vendor
 
     
     // Filter Orders
