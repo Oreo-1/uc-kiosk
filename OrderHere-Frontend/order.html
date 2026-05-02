@@ -338,11 +338,12 @@
     .btn-tambah:active { transform: scale(0.98); }
   </style>
   <link rel="stylesheet" href="main.css" />
+  <script src="config.js"></script>
 </head>
 <body>
 <div class="page">
 
-  <!-- ══ LEFT ══ -->
+  <!-- ══ LEFT ═ -->
   <div class="main">
     <div class="vendor-row">
       <div class="vendor-card active" id="vendor-1" onclick="selectVendor(1)">
@@ -372,78 +373,7 @@
 
     <div class="menu-grid-wrapper">
       <div class="menu-grid" id="menu-grid">
-
-        <div class="menu-card" data-category="makanan"
-          data-name="Nasi Goreng" data-price="12000" data-est="20" data-emoji="🍳"
-          data-spice='["Tidak Pedas","Sambal Matah","Sambal Hijau"]'
-          data-addons='[{"label":"Telur","price":3000},{"label":"Kerupuk","price":3000},{"label":"Extra Size","price":8000}]'
-          onclick="openSheet(this)">
-          <div class="menu-img-wrap"><div class="menu-img-placeholder">🍳</div></div>
-          <div class="menu-info">
-            <p class="menu-name">Nasi Goreng</p>
-            <p class="menu-price">Rp. 12.000</p>
-          </div>
-        </div>
-
-        <div class="menu-card" data-category="makanan"
-          data-name="Mie Goreng" data-price="12000" data-est="15" data-emoji="🍜"
-          data-spice='["Tidak Pedas","Level 1","Level 2"]'
-          data-addons='[{"label":"Telur","price":3000},{"label":"Kerupuk","price":3000}]'
-          onclick="openSheet(this)">
-          <div class="menu-img-wrap"><div class="menu-img-placeholder">🍜</div></div>
-          <div class="menu-info">
-            <p class="menu-name">Mie Goreng</p>
-            <p class="menu-price">Rp. 12.000</p>
-          </div>
-        </div>
-
-        <div class="menu-card sold-out" data-category="makanan">
-          <div class="menu-img-wrap">
-            <div class="menu-img-placeholder">🍲</div>
-            <div class="sold-out-badge">Habis</div>
-          </div>
-          <div class="menu-info">
-            <p class="menu-name">Sop Buntut</p>
-            <p class="menu-price">Rp. 12.000</p>
-          </div>
-        </div>
-
-        <div class="menu-card" data-category="makanan"
-          data-name="Mie Kering" data-price="12000" data-est="20" data-emoji="🍝"
-          data-spice='["Tidak Pedas","Pedas"]'
-          data-addons='[{"label":"Extra Size","price":8000}]'
-          onclick="openSheet(this)">
-          <div class="menu-img-wrap"><div class="menu-img-placeholder">🍝</div></div>
-          <div class="menu-info">
-            <p class="menu-name">Mie Kering</p>
-            <p class="menu-price">Rp. 12.000</p>
-          </div>
-        </div>
-
-        <div class="menu-card" data-category="minuman"
-          data-name="Es Teh" data-price="5000" data-est="5" data-emoji="🧋"
-          data-spice='[]'
-          data-addons='[{"label":"Manis","price":0},{"label":"Kurang Manis","price":0}]'
-          onclick="openSheet(this)">
-          <div class="menu-img-wrap"><div class="menu-img-placeholder">🧋</div></div>
-          <div class="menu-info">
-            <p class="menu-name">Es Teh</p>
-            <p class="menu-price">Rp. 5.000</p>
-          </div>
-        </div>
-
-        <div class="menu-card" data-category="snack"
-          data-name="Kentang Goreng" data-price="8000" data-est="10" data-emoji="🍟"
-          data-spice='[]'
-          data-addons='[{"label":"Saus Tomat","price":0},{"label":"Mayonaise","price":1000}]'
-          onclick="openSheet(this)">
-          <div class="menu-img-wrap"><div class="menu-img-placeholder">🍟</div></div>
-          <div class="menu-info">
-            <p class="menu-name">Kentang Goreng</p>
-            <p class="menu-price">Rp. 8.000</p>
-          </div>
-        </div>
-
+        <!-- Menu akan di-render otomatis oleh JavaScript -->
       </div>
     </div>
   </div>
@@ -514,64 +444,125 @@
   </div>
 
 </div>
+<script src="config.js"></script>
 <script>
-  // ── Vendor / filter ──────────────────────────────────
+  // ── GLOBAL STATE ──────────────────────────────
+  let currentVendorId = 1;
+  let allFoods = [];
+  let sheetData = {};
+  let sheetQty = 1;
+  let selectedSpice = null;
+  let selectedAddons = [];
+  let cart = [];
+
+  // ── FETCH FOODS FROM API ──────────────────────
+  async function loadFoods(vendorId = null, category = 'all') {
+    try {
+      let url = '/foods?per_page=50';
+      if (vendorId) url += `&vendor_id=${vendorId}`;
+      if (category !== 'all') {
+        const backendCat = Object.keys(CATEGORY_MAP).find(k => CATEGORY_MAP[k] === category);
+        if (backendCat) url += `&type=${backendCat}`;
+      }
+      const res = await apiFetch(url);
+      allFoods = res.data;
+      renderFoods(allFoods);
+    } catch (err) {
+      console.error('Failed to load foods:', err);
+      document.getElementById('menu-grid').innerHTML = 
+        '<p style="grid-column:1/-1;text-align:center;color:red;padding:20px;">Gagal load menu</p>';
+    }
+  }
+
+  // ── RENDER FOODS TO GRID ─────────────────────
+  function renderFoods(foods) {
+    const grid = document.getElementById('menu-grid');
+    if (!grid) return;
+    
+    if (foods.length === 0) {
+      grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;padding:20px;">Menu kosong</p>';
+      return;
+    }
+    
+    grid.innerHTML = foods.map(food => {
+      const category = CATEGORY_MAP[food.type] || food.type.toLowerCase();
+      const isSoldOut = !food.active;
+      const emoji = getEmojiByType(food.type);
+      
+      return `
+        <div class="menu-card ${isSoldOut ? 'sold-out' : ''}" 
+             data-id="${food.id}"
+             data-category="${category}"
+             data-name="${food.name}"
+             data-price="${food.price}"
+             data-est="${food.estimated_time}"
+             data-emoji="${emoji}"
+             data-spice='[]'
+             data-addons='[]'
+             ${!isSoldOut ? `onclick="openSheet(this)"` : ''}>
+          <div class="menu-img-wrap">
+            <div class="menu-img-placeholder">${emoji}</div>
+            ${isSoldOut ? '<div class="sold-out-badge">Habis</div>' : ''}
+          </div>
+          <div class="menu-info">
+            <p class="menu-name">${food.name}</p>
+            <p class="menu-price">${formatRp(food.price)}</p>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function getEmojiByType(type) {
+    const map = { 'FOOD': '🍽️', 'DRINK': '🧋', 'SNACK': '🍟', 'PRASMANAN': '🍱' };
+    return map[type] || '🍴';
+  }
+
+  // ── VENDOR & FILTER ──────────────────────────
   const vendors = { 1: { name: 'Chick on Cup' }, 2: { name: 'Warung AW' } };
 
   function selectVendor(id) {
+    currentVendorId = id;
     document.querySelectorAll('.vendor-card').forEach(c => c.classList.remove('active'));
     document.getElementById('vendor-' + id).classList.add('active');
-    document.getElementById('vendor-title').textContent = vendors[id].name;
+    document.getElementById('vendor-title').textContent = vendors[id]?.name || 'Vendor';
     setFilter(document.querySelector('.filter-tag'), 'all');
   }
 
   function setFilter(el, category) {
     document.querySelectorAll('.filter-tag').forEach(t => t.classList.remove('active'));
     el.classList.add('active');
-    document.querySelectorAll('.menu-card').forEach(card => {
-      const cat = card.dataset.category;
-      card.style.display = (category === 'all' || cat === category) ? '' : 'none';
-    });
+    const filtered = category === 'all' ? allFoods : allFoods.filter(f => CATEGORY_MAP[f.type] === category);
+    renderFoods(filtered);
   }
 
-  // ── URL param ────────────────────────────────────────
-  const params = new URLSearchParams(window.location.search);
-  document.getElementById('order-type-badge').textContent =
-    (params.get('type') || 'takeaway').toUpperCase();
-
-  // ── Bottom Sheet state ───────────────────────────────
-  let sheetData = {};
-  let sheetQty = 1;
-  let selectedSpice = null;
-  let selectedAddons = [];   // array of { label, price }
-
+  // ── BOTTOM SHEET ─────────────────────────────
   function openSheet(card) {
     document.getElementById('sheet-catatan').value = '';
     const d = card.dataset;
     sheetData = {
-      name:      d.name,
+      id: d.id,
+      name: d.name,
       basePrice: parseInt(d.price),
-      est:       d.est,
-      emoji:     d.emoji || '🍽️',
-      spice:     JSON.parse(d.spice  || '[]'),
-      addons:    JSON.parse(d.addons || '[]'),
+      est: d.est,
+      emoji: d.emoji || '🍽️',
+      spice: JSON.parse(d.spice || '[]'),
+      addons: JSON.parse(d.addons || '[]'),
     };
-    sheetQty      = 1;
+    sheetQty = 1;
     selectedSpice = null;
     selectedAddons = [];
 
-    // Fill sheet
-    document.getElementById('sheet-name').textContent  = sheetData.name;
-    document.getElementById('sheet-qty').textContent   = 1;
-    document.getElementById('sheet-img').textContent   = sheetData.emoji;
-    document.getElementById('sheet-est-text').innerHTML =
-      `*estimasi waktu : <strong>${sheetData.est} menit</strong>`;
+    document.getElementById('sheet-name').textContent = sheetData.name;
+    document.getElementById('sheet-qty').textContent = 1;
+    document.getElementById('sheet-img').textContent = sheetData.emoji;
+    document.getElementById('sheet-est-text').innerHTML = `*estimasi waktu : <strong>${sheetData.est} menit</strong>`;
     updateSheetPrice();
 
-    // Spice
+    // Render spice
     const spiceSec = document.getElementById('sheet-spice-section');
     const spiceCon = document.getElementById('sheet-spice-options');
-    if (sheetData.spice.length) {
+    if (sheetData.spice?.length) {
       spiceSec.style.display = '';
       spiceCon.innerHTML = sheetData.spice.map(s => `
         <div class="sheet-option" onclick="selectSpice(this,'${s}')">
@@ -582,10 +573,10 @@
       spiceSec.style.display = 'none';
     }
 
-    // Addons
+    // Render addons
     const addonSec = document.getElementById('sheet-addon-section');
     const addonCon = document.getElementById('sheet-addon-options');
-    if (sheetData.addons.length) {
+    if (sheetData.addons?.length) {
       addonSec.style.display = '';
       addonCon.innerHTML = sheetData.addons.map((a,i) => `
         <div class="sheet-option" data-idx="${i}" onclick="toggleAddon(this,${i})">
@@ -612,8 +603,7 @@
   }
 
   function selectSpice(el, value) {
-    document.querySelectorAll('#sheet-spice-options .sheet-option')
-      .forEach(o => o.classList.remove('selected'));
+    document.querySelectorAll('#sheet-spice-options .sheet-option').forEach(o => o.classList.remove('selected'));
     el.classList.add('selected');
     selectedSpice = value;
   }
@@ -639,9 +629,7 @@
     document.getElementById('sheet-price').textContent = formatRp(total);
   }
 
-  // ── Cart ──────────────────────────────────────────────
-  let cart = [];
-
+  // ── CART ────────────────────────────────────
   function confirmAddToOrder() {
     const catatan = document.getElementById('sheet-catatan').value.trim();
     const addonLabels = selectedAddons.map(a => a.label);
@@ -652,20 +640,20 @@
       existing.qty += sheetQty;
     } else {
       cart.push({
-        id:         Date.now(),
+        id: Date.now(),
+        food_id: parseInt(sheetData.id),
         key,
-        name:       sheetData.name,
-        basePrice:  sheetData.basePrice,
-        addonAmt:   addonTotal(),
-        qty:        sheetQty,
-        est:        parseInt(sheetData.est),
-        emoji:      sheetData.emoji,
-        spice:      selectedSpice,
-        addons:     [...addonLabels],
+        name: sheetData.name,
+        basePrice: sheetData.basePrice,
+        addonAmt: addonTotal(),
+        qty: sheetQty,
+        est: parseInt(sheetData.est),
+        emoji: sheetData.emoji,
+        spice: selectedSpice,
+        addons: [...addonLabels],
         catatan,
       });
     }
-
     closeSheet();
     renderCart();
   }
@@ -684,30 +672,27 @@
 
   function renderCart() {
     const container = document.getElementById('order-items');
-    const emptyEl   = document.getElementById('cart-empty');
-    const badge      = document.getElementById('order-count');
+    const emptyEl = document.getElementById('cart-empty');
+    const badge = document.getElementById('order-count');
 
     if (cart.length === 0) {
-      // Remove only cart-item elements, leave emptyEl intact
       container.querySelectorAll('.cart-item').forEach(el => el.remove());
       emptyEl.style.display = 'flex';
       document.getElementById('order-total').textContent = 'Rp. 0';
-      document.getElementById('order-est').textContent   = '';
-      document.getElementById('btn-pesan').disabled      = true;
+      document.getElementById('order-est').textContent = '';
+      document.getElementById('btn-pesan').disabled = true;
       badge.style.display = 'none';
       return;
     }
 
     emptyEl.style.display = 'none';
-
     let total = 0, maxEst = 0, count = 0;
 
     const html = cart.map(item => {
       const lineTotal = (item.basePrice + item.addonAmt) * item.qty;
-      total  += lineTotal;
-      maxEst  = Math.max(maxEst, item.est);
-      count  += item.qty;
-
+      total += lineTotal;
+      maxEst = Math.max(maxEst, item.est);
+      count += item.qty;
       const noteText = [item.spice, ...item.addons, item.catatan].filter(Boolean).join(' · ');
 
       return `
@@ -733,30 +718,29 @@
     emptyEl.insertAdjacentHTML('afterend', html);
 
     document.getElementById('order-total').textContent = formatRp(total);
-    document.getElementById('order-est').innerHTML =
-      `*estimasi waktu : <strong>${maxEst} menit</strong>`;
+    document.getElementById('order-est').innerHTML = `*estimasi waktu : <strong>${maxEst} menit</strong>`;
     document.getElementById('btn-pesan').disabled = false;
-
-    badge.textContent   = count;
+    badge.textContent = count;
     badge.style.display = 'flex';
   }
 
   function handlePesan() {
     if (cart.length === 0) return;
-
-    // Calculate max est
     const maxEst = Math.max(...cart.map(i => i.est));
-
     sessionStorage.setItem('cart', JSON.stringify(cart));
     sessionStorage.setItem('maxEst', maxEst);
-    sessionStorage.setItem('antrian', '10'); // replace with real queue number later
-
+    sessionStorage.setItem('antrian', '10');
     window.location.href = 'review-order.html';
   }
 
-  function formatRp(n) {
-    return 'Rp. ' + n.toLocaleString('id-ID');
-  }
+  // ── INIT ────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    loadFoods(currentVendorId);
+    const params = new URLSearchParams(window.location.search);
+    const orderType = params.get('type') || 'takeaway';
+    const badge = document.getElementById('order-type-badge');
+    if (badge) badge.textContent = orderType.toUpperCase();
+  });
 </script>
 </body>
 </html>
