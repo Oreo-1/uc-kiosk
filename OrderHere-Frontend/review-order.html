@@ -24,7 +24,6 @@
       padding: 36px 48px 120px;
     }
 
-    /* ── Back ── */
     .back-btn {
       display: flex; align-items: center; gap: 6px;
       font-size: 16px; font-weight: 700; color: #1a1a1a;
@@ -36,7 +35,6 @@
     .back-btn:hover { opacity: 0.6; }
     .back-btn svg { width: 18px; height: 18px; }
 
-    /* ── Header ── */
     .header {
       display: flex;
       justify-content: space-between;
@@ -68,7 +66,6 @@
       font-size: 18px; font-weight: 800; color: #1a1a1a;
     }
 
-    /* ── Order list ── */
     .order-list {
       display: flex;
       flex-direction: column;
@@ -136,13 +133,11 @@
       padding-top: 2px;
     }
 
-    /* ── Divider ── */
     .divider {
       height: 1px; background: #f3f4f6;
       margin: 8px 0;
     }
 
-    /* ── Total row ── */
     .total-row {
       display: flex;
       justify-content: space-between;
@@ -155,7 +150,6 @@
     .total-label { font-size: 15px; font-weight: 700; color: #1a1a1a; }
     .total-amount { font-size: 22px; font-weight: 800; color: #1a1a1a; }
 
-    /* ── Fixed footer ── */
     .footer {
       position: fixed;
       bottom: 0; left: 50%;
@@ -177,7 +171,6 @@
     .btn-pesan:hover { opacity: 0.9; }
     .btn-pesan:active { transform: scale(0.99); }
 
-    /* ══ PAYMENT BOTTOM SHEET ══ */
     .pay-overlay {
       position: fixed; inset: 0;
       background: rgba(0,0,0,0.45);
@@ -283,7 +276,6 @@
 <body>
 <div class="page">
 
-  <!-- Back -->
   <button class="back-btn" onclick="window.history.back()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
       <polyline points="15 18 9 12 15 6"/>
@@ -291,7 +283,6 @@
     Kembali
   </button>
 
-  <!-- Header -->
   <div class="header">
     <h1 class="header-title">Cek Kembali<br><strong>Pesanan</strong> Anda</h1>
     <div class="header-meta">
@@ -300,12 +291,8 @@
     </div>
   </div>
 
-  <!-- Order list -->
-  <div class="order-list" id="order-list">
-    <!-- populated by JS -->
-  </div>
+  <div class="order-list" id="order-list"></div>
 
-  <!-- Total -->
   <div class="total-row">
     <span class="total-label">Total</span>
     <span class="total-amount" id="total-amount">Rp. 0</span>
@@ -313,12 +300,10 @@
 
 </div>
 
-<!-- Fixed footer -->
 <div class="footer">
   <button class="btn-pesan" id="btn-pesan" onclick="handlePesan()">Pesan</button>
 </div>
 
-<!-- ══ PAYMENT OVERLAY ══ -->
 <div class="pay-overlay" id="pay-overlay" onclick="closePaySheet()"></div>
 
 <div class="pay-sheet" id="pay-sheet">
@@ -358,24 +343,24 @@
   </div>
 </div>
 
-<script src="config.js"></script>
 <script>
-  // ── Read cart from sessionStorage ──────────────────
+  // ── LOAD CART FROM SESSION ───────────────────
   const cart = JSON.parse(sessionStorage.getItem('cart') || '[]');
   const maxEst = JSON.parse(sessionStorage.getItem('maxEst') || '0');
   const antrian = sessionStorage.getItem('antrian') || '—';
 
-  // ── Populate header ────────────────────────────────
+  // ── POPULATE HEADER ──────────────────────────
   document.getElementById('header-est').innerHTML =
     `*estimasi waktu : <strong>${maxEst} menit</strong>`;
   document.getElementById('header-antrian').textContent =
     `No. Antrian : ${antrian}`;
 
-  // ── Render items ───────────────────────────────────
+  // ── FORMAT RUPIAH ────────────────────────────
   function formatRp(n) {
     return 'Rp. ' + n.toLocaleString('id-ID');
   }
 
+  // ── RENDER ORDER ITEMS ───────────────────────
   const list = document.getElementById('order-list');
 
   if (cart.length === 0) {
@@ -416,11 +401,11 @@
     document.getElementById('total-amount').textContent = formatRp(total);
   }
 
-  // ── Payment Sheet State ────────────────────────────
+  // ── PAYMENT SHEET STATE ──────────────────────
   let selectedPayment = null;
-  let orderCreated = false; // Flag: apakah order sudah dibuat di backend?
+  let orderCreated = false;
 
-  // ── Handle Pesan: Submit ke API dulu ───────────────
+  // ── HANDLE PESAN: SUBMIT TO API ──────────────
   async function handlePesan() {
     const btn = document.getElementById('btn-pesan');
     
@@ -430,20 +415,21 @@
       return;
     }
 
-    // Jika belum, submit ke API dulu
     btn.textContent = 'Memproses...';
     btn.disabled = true;
 
     try {
+      // Siapkan payload untuk Laravel
       const payload = {
         dining_type: 'TAKEAWAY',
         foods: cart.map(item => ({
-          food_id: item.food_id,
+          food_id: item.food_id,    // ✅ ID dari database
           quantity: item.qty,
           notes: item.catatan || null
         }))
       };
 
+      // Kirim POST ke API
       const response = await fetch(`${API_CONFIG.BASE_URL}/orders`, {
         method: 'POST',
         headers: {
@@ -460,7 +446,7 @@
         sessionStorage.setItem('order', JSON.stringify(result.data));
         sessionStorage.setItem('antrian', result.data.queue_number || '10');
         
-        // Tandai bahwa order sudah dibuat
+        // Tandai order sudah dibuat
         orderCreated = true;
         
         // Buka payment sheet
@@ -479,7 +465,7 @@
     }
   }
 
-  // ── Buka Payment Sheet (fungsi terpisah) ───────────
+  // ── OPEN PAYMENT SHEET ───────────────────────
   function openPaymentSheet() {
     document.getElementById('pay-total-amt').textContent =
       document.getElementById('total-amount').textContent;
@@ -503,15 +489,13 @@
     document.getElementById('pay-' + type).classList.add('selected');
   }
 
-  // ── Handle Lakukan Pembayaran (TETAP SAMA) ─────────
+  // ── HANDLE LAKUKAN PEMBAYARAN ────────────────
   function handleLakukanPembayaran() {
     const nama = document.getElementById('pay-name').value.trim();
     if (!selectedPayment) { alert('Pilih metode pembayaran dulu.'); return; }
 
     sessionStorage.setItem('paymentMethod', selectedPayment);
     sessionStorage.setItem('customerName', nama);
-    
-    // Redirect ke payment.html
     window.location.href = 'payment.html';
   }
 </script>

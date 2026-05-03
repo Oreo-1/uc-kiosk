@@ -4,7 +4,7 @@ const API_CONFIG = {
   BASE_URL: 'http://127.0.0.1:8000/api',
 };
 
-// Helper: Fetch dengan error handlingrenderFoods
+// Helper: Fetch dengan error handling
 async function apiFetch(endpoint) {
   try {
     const response = await fetch(`${API_CONFIG.BASE_URL}${endpoint}`);
@@ -33,3 +33,15 @@ const CATEGORY_MAP = {
   'SNACK': 'snack',
   'PRASMANAN': 'paket'
 };
+
+// ✅ Helper: Get Full Image URL (untuk gambar dari database)
+function getImageUrl(imagePath) {
+  if (!imagePath) return null;
+  
+  // Jika path sudah http/https, langsung return
+  if (imagePath.startsWith('http')) return imagePath;
+  
+  // Jika tidak, tambahkan storage path Laravel
+  // Asumsi: gambar disimpan di storage/app/public/foods/
+  return `${API_CONFIG.BASE_URL.replace('/api', '')}/storage/${imagePath}`;
+}

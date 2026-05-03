@@ -12,6 +12,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
@@ -24,27 +25,26 @@ class OrderController extends Controller
         try {
             $query = Order::with(['vendor', 'foods']);
 
-            // Optional filters
             if ($request->filled('vendor_id')) {
-                $query->where('vendor_id', $request->vendor_id);
+                $query->where('vendor_id', $request->input('vendor_id'));
             }
             if ($request->filled('status')) {
-                $query->where('status', $request->status);
+                $query->where('status', $request->input('status'));
             }
             if ($request->filled('dining_type')) {
-                $query->where('dining_type', $request->dining_type);
+                $query->where('dining_type', $request->input('dining_type'));
             }
             if ($request->filled('queue_number')) {
-                $query->where('queue_number', $request->queue_number);
+                $query->where('queue_number', $request->input('queue_number'));
             }
             if ($request->filled('min_price')) {
-                $query->where('total_price', '>=', $request->min_price);
+                $query->where('total_price', '>=', $request->input('min_price'));
             }
             if ($request->filled('max_price')) {
-                $query->where('total_price', '<=', $request->max_price);
+                $query->where('total_price', '<=', $request->input('max_price'));
             }
 
-            $perPage = $request->get('per_page', 10);
+            $perPage = $request->input('per_page', 10);
             $orders = $query->orderBy('id', 'desc')->paginate($perPage);
 
             return response()->json([
@@ -60,12 +60,14 @@ class OrderController extends Controller
             ], 200);
 
         } catch (QueryException $e) {
+            Log::error('Order index failed:', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Database error occurred.',
                 'error' => config('app.debug') === true ? $e->getMessage() : 'Silakan hubungi administrator.'
             ], 500);
         } catch (Throwable $e) {
+            Log::error('Order index failed:', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Internal server error.',
@@ -82,7 +84,6 @@ class OrderController extends Controller
     {
         try {
             $validated = $request->validate([
-                // ✅ dining_type: wajib, hanya TAKEAWAY atau DINEIN
                 'dining_type'  => ['required', Rule::in(['TAKEAWAY', 'DINEIN'])],
                 'foods'        => ['required', 'array', 'min:1'],
                 'foods.*.food_id'  => ['required', 'integer', 'exists:food,id'],
@@ -90,11 +91,9 @@ class OrderController extends Controller
                 'foods.*.notes'    => ['nullable', 'string', 'max:255'],
             ]);
 
-            // ✅ STEP 1: Ambil vendor_id dari food pertama
             $firstFood = Food::findOrFail($validated['foods'][0]['food_id']);
             $vendorId = $firstFood->vendor_id;
 
-            // ✅ STEP 2: Validasi semua food harus dari vendor yang sama
             $foodIds = array_column($validated['foods'], 'food_id');
             $foods = Food::whereIn('id', $foodIds)->get();
             
@@ -106,22 +105,46 @@ class OrderController extends Controller
                 ], 400);
             }
 
-            // ✅ STEP 3: Generate queue_number otomatis (reset per hari per vendor)
             $today = now()->startOfDay();
             $todayOrderCount = Order::where('vendor_id', $vendorId)
                 ->whereDate('created_at', $today)
                 ->count();
             $queueNumber = $todayOrderCount + 1;
 
-            // ✅ STEP 4: Hitung totals & prepare order foods
+            // ✅ FIX: AGGREGATE ITEMS BY FOOD_ID (PENTING!)
+            // Mencegah error "Duplicate entry" karena primary key order_food adalah (order_id, food_id)
             $totalPrice = 0;
             $totalEstimated = 0;
-            $orderFoods = [];
+            $groupedItems = [];
 
             foreach ($validated['foods'] as $item) {
-                $food = $foods->firstWhere('id', $item['food_id']);
+                $foodId = $item['food_id'];
                 
-                if (!$food->active) {
+                // Jika food_id sudah ada di array, tambahkan quantity-nya
+                if (!isset($groupedItems[$foodId])) {
+                    $groupedItems[$foodId] = [
+                        'quantity' => 0,
+                        'notes' => $item['notes'] ?? null,
+                    ];
+                }
+                
+                $groupedItems[$foodId]['quantity'] += $item['quantity'];
+                
+                // Gabungkan notes jika ada
+                if (!empty($item['notes'])) {
+                    $existingNotes = $groupedItems[$foodId]['notes'];
+                    $groupedItems[$foodId]['notes'] = $existingNotes 
+                        ? $existingNotes . ', ' . $item['notes'] 
+                        : $item['notes'];
+                }
+            }
+
+            // Process grouped items menjadi array untuk insert
+            $orderFoods = [];
+            foreach ($groupedItems as $foodId => $itemData) {
+                $food = $foods->firstWhere('id', $foodId);
+                
+                if (!$food || !$food->active) {
                     return response()->json([
                         'success' => false,
                         'message' => 'Food not available.',
@@ -129,23 +152,22 @@ class OrderController extends Controller
                     ], 400);
                 }
 
-                $itemTotal = $food->price * $item['quantity'];
+                $itemTotal = $food->price * $itemData['quantity'];
                 $totalPrice += $itemTotal;
-                $totalEstimated += $food->estimated_time * $item['quantity'];
+                $totalEstimated += $food->estimated_time * $itemData['quantity'];
 
                 $orderFoods[] = [
                     'food_id'     => $food->id,
-                    'quantity'    => $item['quantity'],
+                    'quantity'    => $itemData['quantity'],
                     'total_price' => $itemTotal,
-                    'notes'       => $item['notes'] ?? null,
+                    'notes'       => $itemData['notes'],
                 ];
             }
 
-            // ✅ STEP 5: Transaction untuk atomic insert
             $order = DB::transaction(function () use ($vendorId, $validated, $queueNumber, $totalPrice, $totalEstimated, $orderFoods) {
                 $order = Order::create([
                     'vendor_id'      => $vendorId,
-                    'dining_type'    => $validated['dining_type'], // ✅ SIMPAN DINING TYPE
+                    'dining_type'    => $validated['dining_type'],
                     'status'         => 'ONPROGRESS',
                     'queue_number'   => $queueNumber,
                     'total_price'    => $totalPrice,
@@ -166,7 +188,7 @@ class OrderController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Order placed successfully.',
-                'data' => $order->load(['vendor', 'foods']) // ✅ dining_type ikut ter-load
+                'data' => $order->load(['vendor', 'foods'])
             ], 201);
 
         } catch (ValidationException $e) {
@@ -189,13 +211,14 @@ class OrderController extends Controller
                     'error' => 'Vendor or Food ID does not exist.'
                 ], 400);
             }
+            Log::error('Order store failed:', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Database error occurred.',
                 'error' => config('app.debug') === true ? $e->getMessage() : 'Silakan hubungi administrator.'
             ], 500);
         } catch (Throwable $e) {
-            \Log::error('Order store failed:', ['error' => $e->getMessage()]);
+            Log::error('Order store failed:', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to place order.',
@@ -228,6 +251,7 @@ class OrderController extends Controller
                 'error' => 'The requested order does not exist.'
             ], 404);
         } catch (Throwable $e) {
+            Log::error('Order show failed:', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Internal server error.',
@@ -247,7 +271,6 @@ class OrderController extends Controller
                 throw new ModelNotFoundException("Order not found");
             }
 
-            // 🔐 Authorization: Only the vendor who owns this order can update status
             $authenticatedVendor = $request->user();
             if (!$authenticatedVendor || $order->vendor_id !== $authenticatedVendor->id) {
                 return response()->json([
@@ -278,7 +301,7 @@ class OrderController extends Controller
                 'error' => 'The requested order does not exist.'
             ], 404);
         } catch (Throwable $e) {
-            \Log::error('Update order status failed:', ['error' => $e->getMessage()]);
+            Log::error('Update order status failed:', ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => 'Update failed.', 'error' => config('app.debug') === true ? $e->getMessage() : 'Internal server error.'], 500);
         }
     }
@@ -290,7 +313,6 @@ class OrderController extends Controller
     public function myOrders(Request $request)
     {
         try {
-            // 🔐 Pastikan user terautentikasi
             $authenticatedVendor = $request->user();
             if (!$authenticatedVendor) {
                 return response()->json([
@@ -304,27 +326,26 @@ class OrderController extends Controller
                 ->where('vendor_id', $authenticatedVendor->id)
                 ->orderBy('id', 'desc');
 
-            // Optional filters
             if ($request->filled('status')) {
-                $query->where('status', $request->status);
+                $query->where('status', $request->input('status'));
             }
             if ($request->filled('dining_type')) {
-                $query->where('dining_type', $request->dining_type);
+                $query->where('dining_type', $request->input('dining_type'));
             }
             if ($request->filled('queue_number')) {
-                $query->where('queue_number', $request->queue_number);
+                $query->where('queue_number', $request->input('queue_number'));
             }
             if ($request->filled('date')) {
-                $query->whereDate('created_at', $request->date);
+                $query->whereDate('created_at', $request->input('date'));
             }
             if ($request->filled('start_date') && $request->filled('end_date')) {
                 $query->whereBetween('created_at', [
-                    $request->start_date . ' 00:00:00',
-                    $request->end_date . ' 23:59:59'
+                    $request->input('start_date') . ' 00:00:00',
+                    $request->input('end_date') . ' 23:59:59'
                 ]);
             }
 
-            $perPage = $request->get('per_page', 10);
+            $perPage = $request->input('per_page', 10);
             $orders = $query->paginate($perPage);
 
             return response()->json([
@@ -340,7 +361,7 @@ class OrderController extends Controller
             ], 200);
 
         } catch (Throwable $e) {
-            \Log::error('Get my orders failed:', ['error' => $e->getMessage()]);
+            Log::error('Get my orders failed:', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve orders.',
@@ -348,7 +369,6 @@ class OrderController extends Controller
             ], 500);
         }
     }
-    
     
     /**
      * Get orders by status (PUBLIC - for customer tracking).
@@ -369,15 +389,14 @@ class OrderController extends Controller
                 ->where('status', $status)
                 ->orderBy('id', 'desc');
 
-            // Optional filters
             if ($request->filled('vendor_id')) {
-                $query->where('vendor_id', $request->vendor_id);
+                $query->where('vendor_id', $request->input('vendor_id'));
             }
             if ($request->filled('dining_type')) {
-                $query->where('dining_type', $request->dining_type);
+                $query->where('dining_type', $request->input('dining_type'));
             }
 
-            $perPage = $request->get('per_page', 10);
+            $perPage = $request->input('per_page', 10);
             $orders = $query->paginate($perPage);
 
             return response()->json([
@@ -393,6 +412,7 @@ class OrderController extends Controller
             ], 200);
 
         } catch (Throwable $e) {
+            Log::error('Order byStatus failed:', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve orders.',

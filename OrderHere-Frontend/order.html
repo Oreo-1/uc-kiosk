@@ -26,7 +26,6 @@
       overflow: hidden;
     }
 
-    /* ══ LEFT ══ */
     .main {
       height: 100vh;
       flex: 1;
@@ -116,7 +115,6 @@
     .menu-name { font-size: 14px; font-weight: 700; color: #1a1a1a; margin-bottom: 4px; text-align: center; }
     .menu-price { font-size: 13px; color: #666; text-align: center; }
 
-    /* ══ RIGHT: Order Panel ══ */
     .order-panel {
       width: 220px; flex-shrink: 0;
       background: #1e2535;
@@ -209,7 +207,6 @@
     .btn-pesan:active { transform: scale(0.97); }
     .btn-pesan:disabled { background: #374151; color: #4b5563; cursor: not-allowed; }
 
-    /* ══ BOTTOM SHEET ══ */
     .sheet-overlay {
       position: absolute; inset: 0;
       background: rgba(0,0,0,0.45);
@@ -343,25 +340,13 @@
 <body>
 <div class="page">
 
-  <!-- ══ LEFT ═ -->
   <div class="main">
     <div class="vendor-row">
-      <div class="vendor-card active" id="vendor-1" onclick="selectVendor(1)">
-        <div class="vendor-logo">
-          <img src="assets/order-page/ChickonCup.png" onerror="this.parentElement.innerHTML='🐔'">
-        </div>
-        <span class="vendor-name">Chick on Cup</span>
-      </div>
-      <div class="vendor-card" id="vendor-2" onclick="selectVendor(2)">
-        <div class="vendor-logo">
-          <img src="assets/order-page/WarungAw.png" onerror="this.parentElement.innerHTML='🍜'">
-        </div>
-        <span class="vendor-name">Warung AW</span>
-      </div>
+      <!-- Vendor akan di-render otomatis oleh JavaScript -->
     </div>
 
     <div class="vendor-header">
-      <h2 class="vendor-title" id="vendor-title">Chick on Cup</h2>
+      <h2 class="vendor-title" id="vendor-title">Loading...</h2>
       <div class="filter-row">
         <button class="filter-tag active" onclick="setFilter(this, 'all')">Semua</button>
         <button class="filter-tag" onclick="setFilter(this, 'makanan')">Makanan</button>
@@ -373,12 +358,11 @@
 
     <div class="menu-grid-wrapper">
       <div class="menu-grid" id="menu-grid">
-        <!-- Menu akan di-render otomatis oleh JavaScript -->
+        <!-- Menu dirender otomatis oleh JavaScript -->
       </div>
     </div>
   </div>
 
-  <!-- ══ RIGHT: Order Panel ══ -->
   <div class="order-panel">
     <div class="order-header-row">
       <p class="order-title">My<br>Order</p>
@@ -402,7 +386,6 @@
     </div>
   </div>
 
-  <!-- ══ BOTTOM SHEET ══ -->
   <div class="sheet-overlay" id="sheet-overlay" onclick="closeSheet()"></div>
 
   <div class="bottom-sheet" id="bottom-sheet">
@@ -444,73 +427,157 @@
   </div>
 
 </div>
-<script src="config.js"></script>
+
 <script>
   // ── GLOBAL STATE ──────────────────────────────
-  let currentVendorId = 1;
+  let currentVendorId = null;
   let allFoods = [];
+  let allVendors = [];
   let sheetData = {};
   let sheetQty = 1;
   let selectedSpice = null;
   let selectedAddons = [];
   let cart = [];
 
-  // ── FETCH FOODS FROM API ──────────────────────
-  async function loadFoods(vendorId = null, category = 'all') {
+  // ── FETCH FOODS & VENDORS ──────────────────────
+  async function loadData() {
     try {
-      let url = '/foods?per_page=50';
-      if (vendorId) url += `&vendor_id=${vendorId}`;
-      if (category !== 'all') {
-        const backendCat = Object.keys(CATEGORY_MAP).find(k => CATEGORY_MAP[k] === category);
-        if (backendCat) url += `&type=${backendCat}`;
-      }
-      const res = await apiFetch(url);
+      // 1. Ambil semua makanan + relasi vendor/addon
+      const res = await apiFetch('/foods?per_page=100');
       allFoods = res.data;
-      renderFoods(allFoods);
+
+      // 2. ✅ EKSTRAK VENDOR OTOMATIS DARI DATA MAKANAN
+      const vendorMap = new Map();
+      allFoods.forEach(food => {
+        if (food.vendor && !vendorMap.has(food.vendor.id)) {
+          vendorMap.set(food.vendor.id, food.vendor);
+        }
+      });
+      allVendors = Array.from(vendorMap.values());
+
+      // 3. Render Vendor & Makanan
+      renderVendors(allVendors);
+      if (allVendors.length > 0) {
+        currentVendorId = allVendors[0].id; // Set default vendor
+        selectVendor(currentVendorId);
+      } else {
+        document.getElementById('menu-grid').innerHTML = '<p>Tidak ada vendor.</p>';
+      }
+
     } catch (err) {
-      console.error('Failed to load foods:', err);
-      document.getElementById('menu-grid').innerHTML = 
-        '<p style="grid-column:1/-1;text-align:center;color:red;padding:20px;">Gagal load menu</p>';
+      console.error('Failed to load data:', err);
+      document.getElementById('menu-grid').innerHTML = '<p style="color:red">Gagal load data</p>';
     }
   }
 
-  // ── RENDER FOODS TO GRID ─────────────────────
+  // ── RENDER VENDORS (DYNAMIC) ─────────────────
+  function renderVendors(vendors) {
+    const container = document.querySelector('.vendor-row');
+    container.innerHTML = ''; 
+
+    vendors.forEach((vendor, index) => {
+      const div = document.createElement('div');
+      div.className = `vendor-card ${index === 0 ? 'active' : ''}`;
+      div.id = `vendor-${vendor.id}`;
+      div.onclick = () => selectVendor(vendor.id);
+      
+      div.innerHTML = `
+        <div class="vendor-logo">
+          <span style="font-size:24px">🏪</span> 
+        </div>
+        <span class="vendor-name">${vendor.name}</span>
+      `;
+      container.appendChild(div);
+    });
+  }
+
+  // ── SELECT VENDOR & FILTER ───────────────────
+  function selectVendor(vendorId) {
+    currentVendorId = vendorId;
+    
+    document.querySelectorAll('.vendor-card').forEach(c => c.classList.remove('active'));
+    const activeCard = document.getElementById(`vendor-${vendorId}`);
+    if(activeCard) activeCard.classList.add('active');
+
+    const vendor = allVendors.find(v => v.id === vendorId);
+    if(vendor) document.getElementById('vendor-title').textContent = vendor.name;
+
+    renderFoods(allFoods.filter(f => f.vendor_id === vendorId));
+  }
+
+  function setFilter(el, category) {
+    document.querySelectorAll('.filter-tag').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+
+    const filtered = allFoods.filter(f => {
+      const matchVendor = f.vendor_id === currentVendorId;
+      const matchCat = category === 'all' ? true : CATEGORY_MAP[f.type] === category;
+      return matchVendor && matchCat;
+    });
+    renderFoods(filtered);
+  }
+
+  // ── RENDER FOODS (WITH IMAGES & REAL DATA) ───
   function renderFoods(foods) {
     const grid = document.getElementById('menu-grid');
     if (!grid) return;
     
+    grid.innerHTML = '';
+
     if (foods.length === 0) {
       grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;padding:20px;">Menu kosong</p>';
       return;
     }
     
-    grid.innerHTML = foods.map(food => {
+    foods.forEach(food => {
       const category = CATEGORY_MAP[food.type] || food.type.toLowerCase();
       const isSoldOut = !food.active;
       const emoji = getEmojiByType(food.type);
       
-      return `
-        <div class="menu-card ${isSoldOut ? 'sold-out' : ''}" 
-             data-id="${food.id}"
-             data-category="${category}"
-             data-name="${food.name}"
-             data-price="${food.price}"
-             data-est="${food.estimated_time}"
-             data-emoji="${emoji}"
-             data-spice='[]'
-             data-addons='[]'
-             ${!isSoldOut ? `onclick="openSheet(this)"` : ''}>
-          <div class="menu-img-wrap">
-            <div class="menu-img-placeholder">${emoji}</div>
-            ${isSoldOut ? '<div class="sold-out-badge">Habis</div>' : ''}
-          </div>
-          <div class="menu-info">
-            <p class="menu-name">${food.name}</p>
-            <p class="menu-price">${formatRp(food.price)}</p>
-          </div>
+      // ✅ GAMBAR DARI DATABASE
+      const imgUrl = getImageUrl(food.image);
+      const imgHTML = imgUrl 
+        ? `<img src="${imgUrl}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` 
+        : '';
+      
+      const card = document.createElement('div');
+      card.className = `menu-card ${isSoldOut ? 'sold-out' : ''}`;
+      
+      // ✅ SIMPAN DATA LENGKAP DI DATASET
+      card.dataset.id = food.id;
+      card.dataset.name = food.name;
+      card.dataset.price = food.price;
+      card.dataset.est = food.estimated_time;
+      card.dataset.category = category;
+      
+      // ✅ SPICE & ADDONS DARI DATABASE
+      card.dataset.spice = JSON.stringify(food.spice || []); 
+      
+      // Mapping addons dari relasi Laravel
+      const dbAddons = (food.addons || []).map(a => ({
+        label: a.addon ? a.addon.name : 'Tambahan',
+        price: a.pivot ? a.pivot.extra_price : 0
+      }));
+      card.dataset.addons = JSON.stringify(dbAddons);
+
+      card.innerHTML = `
+        <div class="menu-img-wrap">
+          ${imgHTML}
+          <div class="menu-img-placeholder" style="${imgUrl ? 'display:none' : ''}">${emoji}</div>
+          ${isSoldOut ? '<div class="sold-out-badge">Habis</div>' : ''}
+        </div>
+        <div class="menu-info">
+          <p class="menu-name">${food.name}</p>
+          <p class="menu-price">${formatRp(food.price)}</p>
         </div>
       `;
-    }).join('');
+
+      if (!isSoldOut) {
+        card.onclick = () => openSheet(card);
+      }
+      
+      grid.appendChild(card);
+    });
   }
 
   function getEmojiByType(type) {
@@ -518,37 +585,21 @@
     return map[type] || '🍴';
   }
 
-  // ── VENDOR & FILTER ──────────────────────────
-  const vendors = { 1: { name: 'Chick on Cup' }, 2: { name: 'Warung AW' } };
-
-  function selectVendor(id) {
-    currentVendorId = id;
-    document.querySelectorAll('.vendor-card').forEach(c => c.classList.remove('active'));
-    document.getElementById('vendor-' + id).classList.add('active');
-    document.getElementById('vendor-title').textContent = vendors[id]?.name || 'Vendor';
-    setFilter(document.querySelector('.filter-tag'), 'all');
-  }
-
-  function setFilter(el, category) {
-    document.querySelectorAll('.filter-tag').forEach(t => t.classList.remove('active'));
-    el.classList.add('active');
-    const filtered = category === 'all' ? allFoods : allFoods.filter(f => CATEGORY_MAP[f.type] === category);
-    renderFoods(filtered);
-  }
-
-  // ── BOTTOM SHEET ─────────────────────────────
+  // ── BOTTOM SHEET LOGIC ───────────────────────
   function openSheet(card) {
     document.getElementById('sheet-catatan').value = '';
     const d = card.dataset;
+    
     sheetData = {
       id: d.id,
       name: d.name,
       basePrice: parseInt(d.price),
       est: d.est,
-      emoji: d.emoji || '🍽️',
+      emoji: getEmojiByType(d.category),
       spice: JSON.parse(d.spice || '[]'),
       addons: JSON.parse(d.addons || '[]'),
     };
+    
     sheetQty = 1;
     selectedSpice = null;
     selectedAddons = [];
@@ -559,12 +610,22 @@
     document.getElementById('sheet-est-text').innerHTML = `*estimasi waktu : <strong>${sheetData.est} menit</strong>`;
     updateSheetPrice();
 
-    // Render spice
+    renderSpiceOptions();
+    renderAddonOptions();
+
+    document.getElementById('sheet-overlay').classList.add('open');
+    document.getElementById('bottom-sheet').classList.add('open');
+  }
+
+  function renderSpiceOptions() {
     const spiceSec = document.getElementById('sheet-spice-section');
     const spiceCon = document.getElementById('sheet-spice-options');
-    if (sheetData.spice?.length) {
+    
+    const spiceList = sheetData.spice.length > 0 ? sheetData.spice : ['Tidak Pedas', 'Sedang', 'Pedas'];
+
+    if (spiceList.length) {
       spiceSec.style.display = '';
-      spiceCon.innerHTML = sheetData.spice.map(s => `
+      spiceCon.innerHTML = spiceList.map(s => `
         <div class="sheet-option" onclick="selectSpice(this,'${s}')">
           <div class="sheet-option-radio"><div class="sheet-option-radio-dot"></div></div>
           <span>${s}</span>
@@ -572,11 +633,13 @@
     } else {
       spiceSec.style.display = 'none';
     }
+  }
 
-    // Render addons
+  function renderAddonOptions() {
     const addonSec = document.getElementById('sheet-addon-section');
     const addonCon = document.getElementById('sheet-addon-options');
-    if (sheetData.addons?.length) {
+    
+    if (sheetData.addons.length) {
       addonSec.style.display = '';
       addonCon.innerHTML = sheetData.addons.map((a,i) => `
         <div class="sheet-option" data-idx="${i}" onclick="toggleAddon(this,${i})">
@@ -586,9 +649,6 @@
     } else {
       addonSec.style.display = 'none';
     }
-
-    document.getElementById('sheet-overlay').classList.add('open');
-    document.getElementById('bottom-sheet').classList.add('open');
   }
 
   function closeSheet() {
@@ -629,7 +689,7 @@
     document.getElementById('sheet-price').textContent = formatRp(total);
   }
 
-  // ── CART ────────────────────────────────────
+  // ── CART LOGIC ───────────────────────────────
   function confirmAddToOrder() {
     const catatan = document.getElementById('sheet-catatan').value.trim();
     const addonLabels = selectedAddons.map(a => a.label);
@@ -658,16 +718,11 @@
     renderCart();
   }
 
-  function removeFromCart(id) {
-    cart = cart.filter(i => i.id !== id);
-    renderCart();
-  }
-
+  function removeFromCart(id) { cart = cart.filter(i => i.id !== id); renderCart(); }
+  
   function changeCartQty(id, delta) {
     const item = cart.find(i => i.id === id);
-    if (!item) return;
-    item.qty = Math.max(1, item.qty + delta);
-    renderCart();
+    if (item) { item.qty = Math.max(1, item.qty + delta); renderCart(); }
   }
 
   function renderCart() {
@@ -726,16 +781,16 @@
 
   function handlePesan() {
     if (cart.length === 0) return;
-    const maxEst = Math.max(...cart.map(i => i.est));
     sessionStorage.setItem('cart', JSON.stringify(cart));
-    sessionStorage.setItem('maxEst', maxEst);
+    sessionStorage.setItem('maxEst', Math.max(...cart.map(i => i.est)));
     sessionStorage.setItem('antrian', '10');
     window.location.href = 'review-order.html';
   }
 
-  // ── INIT ────────────────────────────────────
+  // ── INIT ─────────────────────────────────────
   document.addEventListener('DOMContentLoaded', () => {
-    loadFoods(currentVendorId);
+    loadData(); // ✅ START FETCHING
+    
     const params = new URLSearchParams(window.location.search);
     const orderType = params.get('type') || 'takeaway';
     const badge = document.getElementById('order-type-badge');

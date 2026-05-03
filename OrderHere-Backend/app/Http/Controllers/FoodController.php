@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Log; // ✅ FIX 1: Tambahkan import Log
 use Throwable;
 
 class FoodController extends Controller
@@ -21,23 +22,22 @@ class FoodController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = Food::with('vendor');
+            $query = Food::with(['vendor', 'addons.addon']);
 
-            // Optional filters
             if ($request->filled('vendor_id')) {
-                $query->where('vendor_id', $request->vendor_id);
+                $query->where('vendor_id', $request->input('vendor_id')); // ✅ FIX 2: get() -> input()
             }
             if ($request->filled('type')) {
-                $query->where('type', $request->type);
+                $query->where('type', $request->input('type'));
             }
             if ($request->filled('search')) {
-                $query->where('name', 'like', '%' . $request->search . '%');
+                $query->where('name', 'like', '%' . $request->input('search') . '%');
             }
             if ($request->filled('active')) {
                 $query->where('active', $request->boolean('active'));
             }
 
-            $perPage = $request->get('per_page', 10);
+            $perPage = $request->input('per_page', 50);
             $foods = $query->paginate($perPage);
 
             return response()->json([
@@ -53,12 +53,14 @@ class FoodController extends Controller
             ], 200);
 
         } catch (QueryException $e) {
+            Log::error('Food index failed:', ['error' => $e->getMessage()]); // ✅ FIX 3: Gunakan Log::
             return response()->json([
                 'success' => false,
                 'message' => 'Database error occurred.',
                 'error' => config('app.debug') === true ? $e->getMessage() : 'Silakan hubungi administrator.'
             ], 500);
         } catch (Throwable $e) {
+            Log::error('Food index failed:', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Internal server error.',
@@ -74,7 +76,6 @@ class FoodController extends Controller
     public function byVendor(Request $request, $vendorId)
     {
         try {
-            // Check if vendor exists first to give better error message
             if (!\App\Models\Vendor::where('id', $vendorId)->exists()) {
                  return response()->json([
                     'success' => false,
@@ -82,20 +83,19 @@ class FoodController extends Controller
                 ], 404);
             }
 
-            $query = Food::where('vendor_id', $vendorId)->with('vendor');
+            $query = Food::where('vendor_id', $vendorId)->with(['vendor', 'addons.addon']);
 
-            // Optional filters (same as index)
             if ($request->filled('type')) {
-                $query->where('type', $request->type);
+                $query->where('type', $request->input('type'));
             }
             if ($request->filled('search')) {
-                $query->where('name', 'like', '%' . $request->search . '%');
+                $query->where('name', 'like', '%' . $request->input('search') . '%');
             }
             if ($request->filled('active')) {
                 $query->where('active', $request->boolean('active'));
             }
 
-            $perPage = $request->get('per_page', 10);
+            $perPage = $request->input('per_page', 50);
             $foods = $query->paginate($perPage);
 
             return response()->json([
@@ -111,12 +111,14 @@ class FoodController extends Controller
             ], 200);
 
         } catch (QueryException $e) {
+            Log::error('Food byVendor failed:', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Database error occurred.',
                 'error' => config('app.debug') === true ? $e->getMessage() : 'Silakan hubungi administrator.'
             ], 500);
         } catch (Throwable $e) {
+            Log::error('Food byVendor failed:', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Internal server error.',
@@ -132,7 +134,6 @@ class FoodController extends Controller
     public function store(Request $request)
     {
         try {
-            // ✅ Validasi TANPA vendor_id dari client
             $validated = $request->validate([
                 'name'             => ['required', 'string', 'max:45', 'unique:food,name'],
                 'type'             => ['required', Rule::in(['FOOD', 'DRINK', 'SNACK', 'PRASMANAN'])],
@@ -144,12 +145,10 @@ class FoodController extends Controller
                 'active'           => ['nullable', 'boolean'],
             ]);
 
-            // ✅ Handle image upload
             if ($request->hasFile('image')) {
                 $validated['image'] = $request->file('image')->store('foods', 'public');
             }
 
-            // ✅ TAMBAHKAN vendor_id dari authenticated user (bukan dari client!)
             $validated['vendor_id'] = $request->user()->id;
 
             $food = Food::create($validated);
@@ -167,7 +166,7 @@ class FoodController extends Controller
                 'errors' => $e->errors()
             ], 422);
         } catch (Throwable $e) {
-            \Log::error('Food store failed:', ['error' => $e->getMessage()]);
+            Log::error('Food store failed:', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Create failed.',
@@ -200,6 +199,7 @@ class FoodController extends Controller
                 'error' => 'The requested food does not exist.'
             ], 404);
         } catch (Throwable $e) {
+            Log::error('Food show failed:', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Internal server error.',
@@ -215,12 +215,10 @@ class FoodController extends Controller
     public function update(Request $request, Food $food)
     {
         try {
-            // ✅ Cek 404: Food tidak ditemukan
             if (!$food->exists) {
                 return response()->json(['success' => false, 'message' => 'Food not found.'], 404);
             }
 
-            // 🔐 CEK AUTHORIZATION: Hanya vendor pemilik yang bisa update
             $authenticatedVendor = $request->user();
             if (!$authenticatedVendor || $food->vendor_id !== $authenticatedVendor->id) {
                 return response()->json([
@@ -230,7 +228,6 @@ class FoodController extends Controller
                 ], 403);
             }
 
-            // ✅ Validasi: Gunakan nullable untuk partial update
             $validated = $request->validate([
                 'name'             => ['nullable', 'string', 'max:45', Rule::unique('food', 'name')->ignore($food->id)],
                 'type'             => ['nullable', Rule::in(['FOOD', 'DRINK', 'SNACK', 'PRASMANAN'])],
@@ -242,10 +239,8 @@ class FoodController extends Controller
                 'active'           => ['nullable', 'boolean'],
             ]);
 
-            // ✅ Filter: Hanya ambil field yang benar-benar diisi
             $updates = array_filter($validated, fn($v) => $v !== null && $v !== '');
 
-            // ✅ Handle image upload
             if ($request->hasFile('image')) {
                 if ($food->image && Storage::disk('public')->exists($food->image)) {
                     Storage::disk('public')->delete($food->image);
@@ -253,7 +248,6 @@ class FoodController extends Controller
                 $updates['image'] = $request->file('image')->store('foods', 'public');
             }
 
-            // ✅ Handle boolean 'active' untuk form-data
             if (array_key_exists('active', $updates)) {
                 $val = $updates['active'];
                 $updates['active'] = match (strtolower(strval($val))) {
@@ -263,7 +257,6 @@ class FoodController extends Controller
                 };
             }
 
-            // ✅ Jika tidak ada yang diupdate, return early
             if (empty($updates)) {
                 return response()->json([
                     'success' => true,
@@ -272,7 +265,6 @@ class FoodController extends Controller
                 ], 200);
             }
 
-            // ✅ Eksekusi update
             $food->update($updates);
 
             return response()->json([
@@ -284,7 +276,7 @@ class FoodController extends Controller
         } catch (ValidationException $e) {
             return response()->json(['success' => false, 'message' => 'Validation failed.', 'errors' => $e->errors()], 422);
         } catch (Throwable $e) {
-            \Log::error('Food update failed:', ['error' => $e->getMessage()]);
+            Log::error('Food update failed:', ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => 'Update failed.', 'error' => config('app.debug') === true ? $e->getMessage() : 'Internal server error.'], 500);
         }
     }
@@ -296,12 +288,10 @@ class FoodController extends Controller
     public function destroy(Food $food)
     {
         try {
-            // ✅ Cek 404: Food tidak ditemukan
             if (!$food->exists) {
                 throw new ModelNotFoundException("Food not found");
             }
 
-            // 🔐 CEK AUTHORIZATION: Hanya vendor pemilik yang bisa delete
             $authenticatedVendor = request()->user();
             if (!$authenticatedVendor || $food->vendor_id !== $authenticatedVendor->id) {
                 return response()->json([
@@ -311,17 +301,13 @@ class FoodController extends Controller
                 ], 403);
             }
 
-            // Clean up associated image
             if ($food->image && Storage::disk('public')->exists($food->image)) {
                 Storage::disk('public')->delete($food->image);
             }
 
-            // Simpan data sebelum delete untuk ditampilkan di response
             $deletedFood = $food->load('vendor');
-            
             $food->delete();
 
-            // ✅ Tampilkan data yang BARU SAJA dihapus (sebagai konfirmasi)
             return response()->json([
                 'success' => true,
                 'message' => 'Food deleted successfully.',
@@ -342,12 +328,14 @@ class FoodController extends Controller
                     'error' => config('app.debug') === true ? $e->getMessage() : null
                 ], 409);
             }
+            Log::error('Food destroy failed:', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Database error occurred.',
                 'error' => config('app.debug') === true ? $e->getMessage() : 'Silakan hubungi administrator.'
             ], 500);
         } catch (Throwable $e) {
+            Log::error('Food destroy failed:', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Internal server error.',
@@ -363,7 +351,6 @@ class FoodController extends Controller
     public function addAddon(Request $request, Food $food)
     {
         try {
-            // ✅ Cek 404
             if (!$food->exists) {
                 return response()->json([
                     'success' => false,
@@ -371,7 +358,6 @@ class FoodController extends Controller
                 ], 404);
             }
 
-            // 🔐 Hanya vendor pemilik yang bisa menambahkan addon
             $authenticatedVendor = $request->user();
             if (!$authenticatedVendor || $food->vendor_id !== $authenticatedVendor->id) {
                 return response()->json([
@@ -381,7 +367,6 @@ class FoodController extends Controller
                 ], 403);
             }
 
-            // ✅ Validasi
             $validated = $request->validate([
                 'addons_id'   => [
                     'required',
@@ -396,7 +381,6 @@ class FoodController extends Controller
                 'extra_price' => ['nullable', 'numeric', 'min:0'],
             ]);
 
-            // Cegah duplikat addon pada food yang sama
             $exists = FoodAddon::where('food_id', $food->id)
                                ->where('addons_id', $validated['addons_id'])
                                ->exists();
@@ -427,7 +411,7 @@ class FoodController extends Controller
                 'errors'  => $e->errors()
             ], 422);
         } catch (Throwable $e) {
-            \Log::error('Food addAddon failed:', ['error' => $e->getMessage()]);
+            Log::error('Food addAddon failed:', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to add addon.',
