@@ -145,6 +145,7 @@
     .ubah-btn:hover { opacity: 0.75; }
   </style>
   <link rel="stylesheet" href="main.css" />
+  <script src="config.js"></script>
 </head>
 <body>
 <div class="page">
@@ -187,37 +188,48 @@
 </div>
 
 <script>
-  const method   = sessionStorage.getItem('paymentMethod') || 'tunai';
-  const cart     = JSON.parse(sessionStorage.getItem('cart') || '[]');
-  const antrian  = sessionStorage.getItem('antrian') || '—';
+  // ✅ LOAD DATA DARI SESSIONSTORAGE (DARI RESPONSE BACKEND)
+  const method = sessionStorage.getItem('paymentMethod') || 'TUNAI';
+  const order = JSON.parse(sessionStorage.getItem('order') || '{}');
+  const antrian = sessionStorage.getItem('antrian') || '—';
 
   // ── Header ──────────────────────────────────────────
-  if (method === 'qris') {
+  if (method.toLowerCase() === 'qris') {
     document.getElementById('card-title').textContent    = 'Scan QRIS';
     document.getElementById('card-subtitle').textContent = '*Scan melalui aplikasi bank atau e-wallet';
     document.getElementById('qris-wrap').style.display  = '';
+    document.getElementById('tunai-img').style.display  = 'none';
   } else {
     document.getElementById('card-title').textContent    = 'Tunai';
     document.getElementById('card-subtitle').textContent = '*Bayar langsung di kasir';
     document.getElementById('tunai-img').style.display  = '';
+    document.getElementById('qris-wrap').style.display  = 'none';
   }
 
   document.getElementById('card-antrian').textContent = `No. Antrian : ${antrian}`;
 
-  // ── Summary ─────────────────────────────────────────
+  // ── FORMAT RUPIAH ────────────────────────────
   function formatRp(n) {
     return 'Rp. ' + n.toLocaleString('id-ID');
   }
 
-  let total = 0;
-  cart.forEach(i => { total += (i.basePrice + i.addonAmt) * i.qty; });
-
-  // item names summary — show first item + "& X lainnya" if more
+  // ── Summary ─────────────────────────────────────────
+  // ✅ Ambil total dari response backend (lebih akurat)
+  const total = order.total_amount || 0;
+  
+  // ✅ Item names summary dari data backend
   let itemLabel = '—';
-  if (cart.length === 1) {
-    itemLabel = cart[0].qty > 1 ? `${cart[0].name} x${cart[0].qty}` : cart[0].name;
-  } else if (cart.length > 1) {
-    itemLabel = `${cart[0].name} & ${cart.length - 1} lainnya`;
+  if (order.foods && order.foods.length > 0) {
+    const firstItem = order.foods[0];
+    const firstName = firstItem.food ? firstItem.food.name : 'Item';
+    
+    if (order.foods.length === 1) {
+      itemLabel = firstItem.quantity > 1 ? 
+        `${firstName} x${firstItem.quantity}` : 
+        firstName;
+    } else {
+      itemLabel = `${firstName} & ${order.foods.length - 1} lainnya`;
+    }
   }
 
   document.getElementById('summary-items').textContent = itemLabel;
