@@ -437,9 +437,9 @@
   let sheetQty = 1;
   let selectedSpice = null;
   let selectedAddons = [];
-  let cart = getCart(); 
-
-  // ✅ LOAD DINING TYPE & TAMPILKAN
+  
+  // ✅ LOAD CART & DINING TYPE DARI LOCALSTORAGE
+  let cart = getCart();
   const diningType = getDiningType();
 
   // ── FETCH FOODS & VENDORS ──────────────────────
@@ -721,11 +721,17 @@
     renderCart();
   }
 
-  function removeFromCart(id) { cart = cart.filter(i => i.id !== id); renderCart(); }
+  function removeFromCart(id) { 
+    cart = cart.filter(i => i.id !== id); 
+    renderCart(); 
+  }
   
   function changeCartQty(id, delta) {
     const item = cart.find(i => i.id === id);
-    if (item) { item.qty = Math.max(1, item.qty + delta); renderCart(); }
+    if (item) { 
+      item.qty = Math.max(1, item.qty + delta); 
+      renderCart(); 
+    }
   }
 
   function renderCart() {
@@ -784,9 +790,14 @@
 
   function handlePesan() {
     if (cart.length === 0) return;
-    sessionStorage.setItem('cart', JSON.stringify(cart));
+    
+    // ✅ SIMPAN CART KE LOCALSTORAGE (SUDAH OTOMATIS VIA saveCart)
+    saveCart(cart);
+    
+    // Simpan maxEst untuk halaman berikutnya
     sessionStorage.setItem('maxEst', Math.max(...cart.map(i => i.est)));
-    sessionStorage.setItem('antrian', '10');
+    
+    // Redirect ke review-order.html
     window.location.href = 'review-order.html';
   }
 
@@ -794,10 +805,9 @@
   document.addEventListener('DOMContentLoaded', () => {
     loadData(); // ✅ START FETCHING
     
-    const params = new URLSearchParams(window.location.search);
-    const orderType = params.get('type') || 'takeaway';
+    // ✅ TAMPILKAN DINING TYPE DARI LOCALSTORAGE
     const badge = document.getElementById('order-type-badge');
-    if (badge) badge.textContent = orderType.toUpperCase();
+    if (badge) badge.textContent = diningType;
   });
 </script>
 </body>
