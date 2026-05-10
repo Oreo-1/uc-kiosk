@@ -160,14 +160,14 @@
     <!-- Option Cards -->
     <div class="options">
 
-      <div class="option-card" id="card-dine" onclick="selectOption(this, 'makan di kantin')">
+      <div class="option-card" id="card-dine" onclick="selectOption(this, 'DINE_IN')">
         <div class="card-icon">
           <img src="assets/dining-options/dinein.svg">
         </div>
         <span class="card-label">Makan Di<br>Kantin</span>
       </div>
 
-      <div class="option-card" id="card-takeaway" onclick="selectOption(this, 'takeaway')">
+      <div class="option-card" id="card-takeaway" onclick="selectOption(this, 'TAKEAWAY')">
         <div class="card-icon">
           <img src="assets/dining-options/takeaway.svg">
         </div>
@@ -185,41 +185,47 @@
 
   </div>
 
+  <script src="config.js"></script>
   <script>
     let selected = null;
 
     function selectOption(el, type) {
-  selected = type;
-  document.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
-  el.classList.add('selected');
-  document.getElementById('btn-pilih').disabled = false;
-}
+      selected = type;
+      document.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+      document.getElementById('btn-pilih').disabled = false;
+    }
 
-  function handlePilih() {
-    if (!selected) return;
-    window.location.href = 'order.html?type=' + encodeURIComponent(selected);
-  }
+    function handlePilih() {
+      if (!selected) return;
+      
+      // ✅ SIMPAN DINING TYPE KE LOCALSTORAGE
+      setDiningType(selected);
+      
+      // Clear cart lama
+      clearCart();
+      
+      // Redirect ke order.html
+      window.location.href = 'order.html';
+    }
 
-  // inactivity to ad page
-  let timeout;
+    // Inactivity timeout to ad page
+    let timeout;
 
-  function resetTimer() {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => {
-      window.location.href = "adv1.html";
-    }, 15000); // 15 seconds (nnti lebih lama)
-  }
+    function resetTimer() {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        window.location.href = "adv1.html";
+      }, 15000); // 15 seconds (nnti lebih lama)
+    }
 
-  // Detect user activity
-  ["click", "mousemove", "keydown", "touchstart"].forEach(event => {
-    document.addEventListener(event, resetTimer);
-  });
+    // Detect user activity
+    ["click", "mousemove", "keydown", "touchstart"].forEach(event => {
+      document.addEventListener(event, resetTimer);
+    });
 
-  // Start timer on load
-  resetTimer();
-
-  // remove orderType when this html
-  localStorage.removeItem("orderType");
+    // Start timer on load
+    resetTimer();
   </script>
 </body>
 
