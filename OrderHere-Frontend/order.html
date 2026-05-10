@@ -437,7 +437,10 @@
   let sheetQty = 1;
   let selectedSpice = null;
   let selectedAddons = [];
-  let cart = [];
+  let cart = getCart(); 
+
+  // ✅ LOAD DINING TYPE & TAMPILKAN
+  const diningType = getDiningType();
 
   // ── FETCH FOODS & VENDORS ──────────────────────
   async function loadData() {

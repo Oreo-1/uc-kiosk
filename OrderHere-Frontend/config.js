@@ -1,5 +1,3 @@
-// OrderHere-Frontend/config.js
-
 const API_CONFIG = {
   BASE_URL: 'http://127.0.0.1:8000/api',
 };
@@ -44,4 +42,25 @@ function getImageUrl(imagePath) {
   // Jika tidak, tambahkan storage path Laravel
   // Asumsi: gambar disimpan di storage/app/public/foods/
   return `${API_CONFIG.BASE_URL.replace('/api', '')}/storage/${imagePath}`;
+}
+
+// ✅ STATE MANAGEMENT UNTUK DINING TYPE & CART
+function setDiningType(type) {
+  localStorage.setItem('diningType', type);
+}
+
+function getDiningType() {
+  return localStorage.getItem('diningType') || 'TAKEAWAY';
+}
+
+function saveCart(cart) {
+  localStorage.setItem('cart', JSON.stringify(cart));
+}
+
+function getCart() {
+  return JSON.parse(localStorage.getItem('cart')) || [];
+}
+
+function clearCart() {
+  localStorage.removeItem('cart');
 }
