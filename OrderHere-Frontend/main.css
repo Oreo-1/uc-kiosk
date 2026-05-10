@@ -47,3 +47,12 @@
     font-family: Montserrat;
     font-style: normal;
 }
+
+.order-type-badge {
+  font-size: 10px; 
+  font-weight: 700;
+  letter-spacing: 0.1em; 
+  color: #9ca3af;
+  margin-bottom: 20px;
+  text-transform: uppercase;
+}
