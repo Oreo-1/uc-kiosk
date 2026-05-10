@@ -1,353 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; -ms-overflow-style: none; scrollbar-width: none; }
-    *::-webkit-scrollbar { display: none; }
-
-    body {
-      font-family: 'Montserrat', sans-serif;
-      background: #f9f9f9;
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-    }
-
-    .page {
-      width: 900px;
-      min-height: 100vh;
-      background: #fff;
-      display: flex;
-      flex-direction: column;
-      padding: 36px 48px 120px;
-    }
-
-    .back-btn {
-      display: flex; align-items: center; gap: 6px;
-      font-size: 16px; font-weight: 700; color: #1a1a1a;
-      cursor: pointer; width: fit-content;
-      margin-bottom: 32px;
-      background: none; border: none;
-      transition: opacity 0.15s;
-    }
-    .back-btn:hover { opacity: 0.6; }
-    .back-btn svg { width: 18px; height: 18px; }
-
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 32px;
-    }
-
-    .header-title {
-      font-size: 36px;
-      font-weight: 400;
-      color: #1a1a1a;
-      line-height: 1.15;
-    }
-    .header-title strong { font-weight: 800; }
-
-    .header-meta {
-      text-align: right;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      padding-top: 6px;
-    }
-    .header-est {
-      font-size: 13px; color: #5c6169;
-    }
-    .header-est strong { color: #1a1a1a; }
-
-    .header-antrian {
-      font-size: 18px; font-weight: 800; color: #1a1a1a;
-    }
-
-    .order-list {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      flex: 1;
-    }
-
-    .order-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 16px;
-      border: 1.5px solid #e5e7eb;
-      border-radius: 14px;
-      padding: 14px;
-      background: #fff;
-      animation: fadeUp 0.3s ease both;
-    }
-
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(10px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    .order-item-img {
-      width: 100px; height: 80px;
-      border-radius: 10px;
-      object-fit: cover;
-      background: #f3f4f6;
-      flex-shrink: 0;
-      overflow: hidden;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 36px;
-    }
-    .order-item-img img { width: 100%; height: 100%; object-fit: cover; }
-
-    .order-item-info { flex: 1; }
-
-    .order-item-name {
-      font-size: 16px; font-weight: 800; color: #1a1a1a;
-      margin-bottom: 6px;
-    }
-
-    .order-item-qty {
-      font-size: 12px; color: #9ca3af; margin-bottom: 4px;
-    }
-
-    .order-item-details {
-      font-size: 13px; color: #555;
-      line-height: 1.7;
-    }
-
-    .order-item-details .detail-label {
-      color: #9ca3af; font-size: 12px;
-    }
-
-    .order-item-catatan {
-      font-size: 12px; color: #9ca3af;
-      margin-top: 4px;
-      font-style: italic;
-    }
-
-    .order-item-price {
-      font-size: 16px; font-weight: 700; color: #1a1a1a;
-      white-space: nowrap;
-      padding-top: 2px;
-    }
-
-    .divider {
-      height: 1px; background: #f3f4f6;
-      margin: 8px 0;
-    }
-
-    .total-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 16px 0 0;
-      border-top: 2px solid #1a1a1a;
-      margin-top: 8px;
-    }
-
-    .total-label { font-size: 15px; font-weight: 700; color: #1a1a1a; }
-    .total-amount { font-size: 22px; font-weight: 800; color: #1a1a1a; }
-
-    .footer {
-      position: fixed;
-      bottom: 0; left: 50%;
-      transform: translateX(-50%);
-      width: 900px;
-      padding: 16px 48px 24px;
-      background: #fff;
-      border-top: 1px solid #f3f4f6;
-    }
-
-    .btn-pesan {
-      width: 100%; padding: 18px;
-      border: none; border-radius: 12px;
-      background: var(--primary-gradient);
-      color: #fff; font-size: 16px; font-weight: 800;
-      letter-spacing: 0.04em; cursor: pointer;
-      transition: opacity 0.2s, transform 0.1s;
-    }
-    .btn-pesan:hover { opacity: 0.9; }
-    .btn-pesan:active { transform: scale(0.99); }
-
-    .pay-overlay {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.45);
-      z-index: 100;
-      opacity: 0; pointer-events: none;
-      transition: opacity 0.3s ease;
-    }
-    .pay-overlay.open { opacity: 1; pointer-events: all; }
-
-    .pay-sheet {
-      position: fixed; bottom: 0; left: 50%;
-      transform: translateX(-50%) translateY(100%);
-      width: 900px;
-      background: #f3f4f6;
-      border-radius: 20px 20px 0 0;
-      z-index: 101;
-      transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
-      display: flex; flex-direction: column;
-      max-height: 90vh;
-    }
-    .pay-sheet.open { transform: translateX(-50%) translateY(0); }
-
-    .pay-handle {
-      width: 40px; height: 4px; border-radius: 2px;
-      background: #d1d5db; margin: 12px auto 0; flex-shrink: 0;
-    }
-
-    .pay-body { padding: 24px 32px 0; overflow-y: auto; }
-
-    .pay-total {
-      font-size: 20px; font-weight: 400; color: #1a1a1a;
-      text-align: center; margin-bottom: 20px;
-    }
-    .pay-total strong { font-weight: 800; }
-
-    .pay-title {
-      font-size: 22px; font-weight: 800; color: #1a1a1a;
-      text-align: center; margin-bottom: 20px; line-height: 1.2;
-    }
-
-    .pay-options {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: 16px; margin-bottom: 24px;
-    }
-
-    .pay-option {
-      border: 2px solid #e5e7eb; border-radius: 14px;
-      background: #fff; padding: 24px 16px;
-      display: flex; flex-direction: column;
-      align-items: center; gap: 10px;
-      cursor: pointer;
-      transition: border-color 0.15s, box-shadow 0.15s;
-      user-select: none;
-    }
-    .pay-option:hover { border-color: #f97316; }
-    .pay-option.selected {
-      border-color: #f97316;
-      box-shadow: 0 4px 16px rgba(249,115,22,0.15);
-    }
-
-    .pay-option-icon { font-size: 28px; color: #f97316; }
-    .pay-option svg { width: 32px; height: 32px; color: #f97316; }
-
-    .pay-option-label {
-      font-size: 14px; font-weight: 700; color: #f97316;
-    }
-
-    .pay-name-section { margin-bottom: 8px; }
-    .pay-name-label {
-      font-size: 14px; font-weight: 600; color: #1a1a1a;
-      margin-bottom: 10px;
-    }
-    .pay-name-input {
-      width: 100%; padding: 14px 16px;
-      border: 1.5px solid #e5e7eb; border-radius: 12px;
-      background: #fff;
-      font-family: 'Montserrat', sans-serif;
-      font-size: 14px; color: #1a1a1a;
-      resize: none; outline: none;
-      transition: border-color 0.15s;
-      min-height: 100px;
-    }
-    .pay-name-input:focus { border-color: #f97316; }
-    .pay-name-input::placeholder { color: #9ca3af; font-weight: 400; }
-
-    .pay-footer {
-      padding: 16px 32px 28px; flex-shrink: 0;
-    }
-    .btn-lakukan {
-      width: 100%; padding: 18px; border: none; border-radius: 12px;
-      background: var(--primary-gradient);
-      color: #fff; font-size: 16px; font-weight: 800;
-      letter-spacing: 0.03em; cursor: pointer;
-      display: flex; align-items: center; justify-content: center; gap: 8px;
-      transition: opacity 0.2s, transform 0.1s;
-    }
-    .btn-lakukan:hover { opacity: 0.9; }
-    .btn-lakukan:active { transform: scale(0.98); }
-  </style>
-  <link rel="stylesheet" href="main.css" />
-  <script src="config.js"></script>
-</head>
-<body>
-<div class="page">
-
-  <button class="back-btn" onclick="window.history.back()">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <polyline points="15 18 9 12 15 6"/>
-    </svg>
-    Kembali
-  </button>
-
-  <div class="header">
-    <h1 class="header-title">Cek Kembali<br><strong>Pesanan</strong> Anda</h1>
-    <div class="header-meta">
-      <p class="header-est" id="header-est">*estimasi waktu : <strong>— menit</strong></p>
-      <p class="header-antrian" id="header-antrian">No. Antrian : —</p>
-    </div>
-  </div>
-
-  <div class="order-list" id="order-list"></div>
-
-  <div class="total-row">
-    <span class="total-label">Total</span>
-    <span class="total-amount" id="total-amount">Rp. 0</span>
-  </div>
-
-</div>
-
-<div class="footer">
-  <button class="btn-pesan" id="btn-pesan" onclick="handlePesan()">Pesan</button>
-</div>
-
-<div class="pay-overlay" id="pay-overlay" onclick="closePaySheet()"></div>
-
-<div class="pay-sheet" id="pay-sheet">
-  <div class="pay-handle"></div>
-  <div class="pay-body">
-
-    <p class="pay-total">Total : <strong id="pay-total-amt">Rp. 0</strong></p>
-    <p class="pay-title">Pilih Opsi<br>Pembayaran</p>
-
-    <div class="pay-options">
-      <div class="pay-option" id="pay-tunai" onclick="selectPayment('tunai')">
-        <div class="pay-option-icon">
-          <img src="assets/review-order/tunai.png">
-        </div>
-        <span class="pay-option-label">Tunai</span>
-      </div>
-
-      <div class="pay-option" id="pay-qris" onclick="selectPayment('qris')">
-        <div class="pay-option-icon">
-          <img src="assets/review-order/qris.png">
-        </div>
-        <span class="pay-option-label">QRIS</span>
-      </div>
-    </div>
-
-    <div class="pay-name-section">
-      <p class="pay-name-label">Tulis Nama dan Lokasi Anda</p>
-      <textarea class="pay-name-input" id="pay-name"
-        placeholder="Contoh: Javin - Lantai 5"></textarea>
-    </div>
-
-  </div>
-  <div class="pay-footer">
-    <button class="btn-lakukan" onclick="handleLakukanPembayaran()">
-      Lakukan Pembayaran &nbsp;→
-    </button>
-  </div>
-</div>
-
 <script>
-  // ── LOAD CART FROM SESSION ───────────────────
-  const cart = JSON.parse(sessionStorage.getItem('cart') || '[]');
+  // ── LOAD CART & DINING TYPE FROM LOCALSTORAGE ───────────────────
+  const cart = getCart();
+  const diningType = getDiningType();
   const maxEst = JSON.parse(sessionStorage.getItem('maxEst') || '0');
-  const antrian = sessionStorage.getItem('antrian') || '—';
+  let antrian = sessionStorage.getItem('antrian') || '—';
 
   // ── POPULATE HEADER ──────────────────────────
   document.getElementById('header-est').innerHTML =
@@ -362,12 +18,13 @@
 
   // ── RENDER ORDER ITEMS ───────────────────────
   const list = document.getElementById('order-list');
+  let totalAmount = 0;
 
   if (cart.length === 0) {
     list.innerHTML = `<p style="color:#9ca3af;font-size:14px;">Tidak ada pesanan.</p>`;
   } else {
-    let total = 0;
     let delay = 0;
+    let total = 0;
 
     cart.forEach(item => {
       const lineTotal = (item.basePrice + item.addonAmt) * item.qty;
@@ -398,71 +55,21 @@
       delay += 60;
     });
 
+    totalAmount = total;
     document.getElementById('total-amount').textContent = formatRp(total);
   }
 
   // ── PAYMENT SHEET STATE ──────────────────────
   let selectedPayment = null;
-  let orderCreated = false;
 
-  // ── HANDLE PESAN: SUBMIT TO API ──────────────
-  async function handlePesan() {
-    const btn = document.getElementById('btn-pesan');
-    
-    // Jika order sudah dibuat, langsung buka payment sheet
-    if (orderCreated) {
-      openPaymentSheet();
+  // ── HANDLE PESAN: BUKA PAYMENT SHEET ──────────────
+  function handlePesan() {
+    if (cart.length === 0) {
+      alert('Keranjang kosong!');
       return;
     }
-
-    btn.textContent = 'Memproses...';
-    btn.disabled = true;
-
-    try {
-      // Siapkan payload untuk Laravel
-      const payload = {
-        dining_type: 'TAKEAWAY',
-        foods: cart.map(item => ({
-          food_id: item.food_id,    // ✅ ID dari database
-          quantity: item.qty,
-          notes: item.catatan || null
-        }))
-      };
-
-      // Kirim POST ke API
-      const response = await fetch(`${API_CONFIG.BASE_URL}/orders`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        // Simpan data order dari backend
-        sessionStorage.setItem('order', JSON.stringify(result.data));
-        sessionStorage.setItem('antrian', result.data.queue_number || '10');
-        
-        // Tandai order sudah dibuat
-        orderCreated = true;
-        
-        // Buka payment sheet
-        openPaymentSheet();
-      } else {
-        alert('Gagal memesan: ' + (result.message || 'Unknown error'));
-        btn.textContent = 'Pesan';
-        btn.disabled = false;
-      }
-
-    } catch (err) {
-      console.error('Submit order failed:', err);
-      alert('Terjadi kesalahan koneksi ke server.');
-      btn.textContent = 'Pesan';
-      btn.disabled = false;
-    }
+    
+    openPaymentSheet();
   }
 
   // ── OPEN PAYMENT SHEET ───────────────────────
@@ -489,15 +96,65 @@
     document.getElementById('pay-' + type).classList.add('selected');
   }
 
-  // ── HANDLE LAKUKAN PEMBAYARAN ────────────────
-  function handleLakukanPembayaran() {
+  // ── HANDLE LAKUKAN PEMBAYARAN: SUBMIT TO API ────────────────
+  async function handleLakukanPembayaran() {
     const nama = document.getElementById('pay-name').value.trim();
-    if (!selectedPayment) { alert('Pilih metode pembayaran dulu.'); return; }
+    
+    if (!selectedPayment) { 
+      alert('Pilih metode pembayaran dulu.'); 
+      return; 
+    }
 
-    sessionStorage.setItem('paymentMethod', selectedPayment);
-    sessionStorage.setItem('customerName', nama);
-    window.location.href = 'payment.html';
+    const btn = document.querySelector('.btn-lakukan');
+    btn.textContent = 'Memproses...';
+    btn.disabled = true;
+
+    try {
+      // ✅ SIAPKAN PAYLOAD LENGKAP
+      const payload = {
+        dining_type: diningType,           // ✅ DARI LOCALSTORAGE
+        payment_method: selectedPayment.toUpperCase(), // ✅ DARI PILIHAN USER
+        foods: cart.map(item => ({
+          food_id: item.food_id,           // ✅ ID DARI DATABASE
+          quantity: item.qty,
+          notes: item.catatan || null
+        }))
+      };
+
+      console.log('Sending payload:', payload);
+
+      // ✅ KIRIM POST KE API LARAVEL
+      const response = await fetch(`${API_CONFIG.BASE_URL}/orders`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        // ✅ SIMPAN DATA ORDER DARI BACKEND
+        sessionStorage.setItem('order', JSON.stringify(result.data));
+        sessionStorage.setItem('antrian', result.data.queue_number || '10');
+        sessionStorage.setItem('paymentMethod', selectedPayment.toUpperCase());
+        
+        // ✅ CLEAR CART
+        clearCart();
+        
+        // ✅ REDIRECT KE PAYMENT.HTML
+        window.location.href = 'payment.html';
+      } else {
+        throw new Error(result.message || 'Gagal membuat pesanan');
+      }
+
+    } catch (err) {
+      console.error('Submit order failed:', err);
+      alert('Terjadi kesalahan: ' + err.message);
+      btn.textContent = 'Lakukan Pembayaran →';
+      btn.disabled = false;
+    }
   }
 </script>
-</body>
-</html>
