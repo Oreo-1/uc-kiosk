@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pembayaran - Food Order</title>
   <style>
+    /* Global Reset */
     * { margin: 0; padding: 0; box-sizing: border-box; -ms-overflow-style: none; scrollbar-width: none; }
     *::-webkit-scrollbar { display: none; }
 
@@ -13,7 +15,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      background: var(--primary-gradient);
+      background: var(--primary-gradient); /* Pastikan var ini ada di main.css */
     }
 
     .page {
@@ -24,7 +26,6 @@
       justify-content: center;
       align-items: center;
       padding: 40px 48px;
-      gap: 0;
     }
 
     /* ── Card ── */
@@ -32,11 +33,11 @@
       width: 100%;
       background: #f3f4f6;
       border-radius: 24px;
-      padding: 36px 40px;
+      padding: 48px 40px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 0;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
     }
 
     /* ── Header ── */
@@ -63,7 +64,7 @@
       margin-bottom: 28px;
     }
 
-    /* ── Tunai illustration ── */
+    /* ── Illustrations ── */
     .tunai-img {
       width: 280px;
       height: 220px;
@@ -71,10 +72,10 @@
       margin-bottom: 28px;
     }
 
-    /* ── QRIS code area ── */
     .qris-wrap {
       width: 100%;
-      background: #4b5563;
+      background: #fff;
+      border: 2px solid #e5e7eb;
       border-radius: 16px;
       aspect-ratio: 1;
       display: flex;
@@ -82,7 +83,8 @@
       justify-content: center;
       margin-bottom: 28px;
       overflow: hidden;
-      max-width: 380px;
+      max-width: 300px;
+      padding: 10px;
     }
 
     .qris-wrap img {
@@ -91,45 +93,32 @@
       object-fit: contain;
     }
 
-    .qris-placeholder {
-      color: #9ca3af;
-      font-size: 13px;
-      font-weight: 600;
-      text-align: center;
-      padding: 20px;
-    }
-
-    /* ── Summary row ── */
+    /* ── Summary ── */
     .summary {
       width: 100%;
-      background: #d9d9d9;
+      background: #e5e7eb;
       border-radius: 14px;
-      padding: 16px 20px;
+      padding: 16px 24px;
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
-      gap: 16px;
+      align-items: center;
     }
 
     .summary-col { display: flex; flex-direction: column; gap: 4px; }
-
-    .summary-label {
-      font-size: 13px;
-      color: #6b7280;
-      font-weight: 500;
-    }
-
-    .summary-value {
-      font-size: 16px;
-      font-weight: 800;
-      color: #1a1a1a;
-    }
-
+    .summary-label { font-size: 13px; color: #6b7280; font-weight: 500; }
+    .summary-value { font-size: 16px; font-weight: 800; color: #1a1a1a; }
     .summary-col.right { text-align: right; }
 
-    /* ── Bottom link ── */
+    /* ── Action Row (Buttons Container) ── */
+    .action-row {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 32px;
+    }
+
     .ubah-btn {
-      margin-top: 28px;
       display: flex;
       align-items: center;
       gap: 6px;
@@ -140,100 +129,131 @@
       background: none;
       border: none;
       transition: opacity 0.15s;
-      align-self: flex-start;
     }
     .ubah-btn:hover { opacity: 0.75; }
+
+    .ok-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 16px 40px;
+      background: #1a1a1a;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 800;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+      transition: transform 0.1s, background 0.2s;
+    }
+    .ok-btn:hover { background: #333; }
+    .ok-btn:active { transform: scale(0.96); }
+
   </style>
   <link rel="stylesheet" href="main.css" />
   <script src="config.js"></script>
 </head>
 <body>
-<div class="page">
 
+<div class="page">
   <div class="card">
-    <p class="card-title" id="card-title">—</p>
+    <p class="card-title" id="card-title">Memuat...</p>
     <p class="card-subtitle" id="card-subtitle">—</p>
     <p class="card-antrian" id="card-antrian">No. Antrian : —</p>
 
-    <!-- Tunai illustration (shown for tunai) -->
+    <!-- Visual Pembayaran -->
     <img class="tunai-img" id="tunai-img"
       src="assets/review-order/tunai-illustration.svg"
-      onerror="this.style.display='none'"
       alt="Tunai" style="display:none;">
 
-    <!-- QRIS code (shown for qris) -->
     <div class="qris-wrap" id="qris-wrap" style="display:none;">
-      <img src="assets/payment/qris.png"
-        onerror="this.outerHTML='<p class=\'qris-placeholder\'>QRIS</p>'"
-        alt="QRIS">
+      <img src="assets/payment/qris.png" alt="QRIS" 
+           onerror="this.parentElement.innerHTML='<p>QRIS Image</p>'">
     </div>
 
-    <!-- Order summary -->
+    <!-- Summary Box -->
     <div class="summary">
       <div class="summary-col">
-        <span class="summary-label">Total Item</span>
+        <span class="summary-label">Pesanan</span>
         <span class="summary-value" id="summary-items">—</span>
       </div>
       <div class="summary-col right">
-        <span class="summary-label">Total Harga</span>
+        <span class="summary-label">Total Bayar</span>
         <span class="summary-value" id="summary-total">Rp. 0</span>
       </div>
     </div>
   </div>
 
-  <button class="ubah-btn" onclick="window.history.back()">
-    ◀ Ubah Opsi Pembayaran
-  </button>
+  <!-- Tombol Aksi -->
+  <div class="action-row">
+    <button class="ubah-btn" onclick="window.history.back()">
+      ◀ Ubah Opsi Pembayaran
+    </button>
 
+    <button class="ok-btn" onclick="goToIndex()">
+      Selesai & OK &nbsp;✔
+    </button>
+  </div>
 </div>
 
 <script>
-  // ✅ LOAD DATA DARI SESSIONSTORAGE (DARI RESPONSE BACKEND)
+  // 1. Ambil Data dari Session
   const method = sessionStorage.getItem('paymentMethod') || 'TUNAI';
   const order = JSON.parse(sessionStorage.getItem('order') || '{}');
   const antrian = sessionStorage.getItem('antrian') || '—';
 
-  // ── Header ──────────────────────────────────────────
-  if (method.toLowerCase() === 'qris') {
-    document.getElementById('card-title').textContent    = 'Scan QRIS';
+  // 2. Update Tampilan Berdasarkan Metode
+  if (method.toUpperCase() === 'QRIS') {
+    document.getElementById('card-title').textContent = 'Scan QRIS';
     document.getElementById('card-subtitle').textContent = '*Scan melalui aplikasi bank atau e-wallet';
-    document.getElementById('qris-wrap').style.display  = '';
-    document.getElementById('tunai-img').style.display  = 'none';
+    document.getElementById('qris-wrap').style.display = 'flex';
+    document.getElementById('tunai-img').style.display = 'none';
   } else {
-    document.getElementById('card-title').textContent    = 'Tunai';
-    document.getElementById('card-subtitle').textContent = '*Bayar langsung di kasir';
-    document.getElementById('tunai-img').style.display  = '';
-    document.getElementById('qris-wrap').style.display  = 'none';
+    document.getElementById('card-title').textContent = 'Bayar Tunai';
+    document.getElementById('card-subtitle').textContent = '*Silakan menuju kasir untuk pembayaran';
+    document.getElementById('tunai-img').style.display = 'block';
+    document.getElementById('qris-wrap').style.display = 'none';
   }
 
   document.getElementById('card-antrian').textContent = `No. Antrian : ${antrian}`;
 
-  // ── FORMAT RUPIAH ────────────────────────────
+  // 3. Format Rupiah
   function formatRp(n) {
-    return 'Rp. ' + n.toLocaleString('id-ID');
+    return 'Rp. ' + (n || 0).toLocaleString('id-ID');
   }
 
-  // ── Summary ─────────────────────────────────────────
-  // ✅ Ambil total dari response backend (lebih akurat)
-  const total = order.total_amount || 0;
+  // 4. Update Summary
+  // Gunakan total_price (sesuai field dari Laravel Controller) atau total_amount
+  const total = order.total_price || order.total_amount || 0;
   
-  // ✅ Item names summary dari data backend
-  let itemLabel = '—';
+  let itemLabel = 'Item Terpilih';
   if (order.foods && order.foods.length > 0) {
     const firstItem = order.foods[0];
-    const firstName = firstItem.food ? firstItem.food.name : 'Item';
+    const name = firstItem.name || 'Makanan';
     
     if (order.foods.length === 1) {
-      itemLabel = firstItem.quantity > 1 ? 
-        `${firstName} x${firstItem.quantity}` : 
-        firstName;
+      itemLabel = firstItem.pivot ? `${name} x${firstItem.pivot.quantity}` : name;
     } else {
-      itemLabel = `${firstName} & ${order.foods.length - 1} lainnya`;
+      itemLabel = `${name} & ${order.foods.length - 1} lainnya`;
     }
   }
 
   document.getElementById('summary-items').textContent = itemLabel;
   document.getElementById('summary-total').textContent = formatRp(total);
+
+  // 5. Fungsi Navigasi
+  function goToIndex() {
+    // Hapus data temporary agar tidak tertumpuk saat pesan baru
+    sessionStorage.removeItem('order');
+    sessionStorage.removeItem('antrian');
+    sessionStorage.removeItem('paymentMethod');
+    
+    // Kembali ke menu utama
+    window.location.href = 'index.html';
+  }
 </script>
+
 </body>
 </html>
