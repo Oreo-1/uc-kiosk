@@ -1,3 +1,2 @@
-# uc-kiosk
+# uc-kiosk.
 kiosk application for uc canteen
-
