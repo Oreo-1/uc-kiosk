@@ -30,7 +30,6 @@
       gap: 0;
     }
 
-    /* ── Card ── */
     .card {
       width: 100%;
       background: #f3f4f6;
@@ -43,7 +42,6 @@
       box-shadow: 0 10px 40px rgba(0,0,0,0.1);
     }
 
-    /* ── Header ── */
     .card-title {
       font-size: 32px;
       font-weight: 800;
@@ -67,7 +65,6 @@
       margin-bottom: 28px;
     }
 
-    /* ── Tunai illustration ── */
     .tunai-img {
       width: 280px;
       height: 220px;
@@ -75,7 +72,6 @@
       margin-bottom: 28px;
     }
 
-    /* ── QRIS code area ── */
     .qris-wrap {
       width: 100%;
       background: #4b5563;
@@ -103,7 +99,6 @@
       padding: 20px;
     }
 
-    /* ── Summary row ── */
     .summary {
       width: 100%;
       background: #d9d9d9;
@@ -132,7 +127,6 @@
 
     .summary-col.right { text-align: right; }
 
-    /* ── Payment Button ── */
     .pay-button {
       width: 100%;
       max-width: 320px;
@@ -153,9 +147,7 @@
       box-shadow: 0 8px 25px rgba(0, 174, 214, 0.4);
     }
 
-    .pay-button:active {
-      transform: translateY(0);
-    }
+    .pay-button:active { transform: translateY(0); }
 
     .pay-button:disabled {
       background: #9ca3af;
@@ -183,11 +175,8 @@
       animation: spin 0.8s linear infinite;
     }
 
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── Bottom link ── */
     .ubah-btn {
       margin-top: 28px;
       display: flex;
@@ -204,7 +193,6 @@
     }
     .ubah-btn:hover { opacity: 0.75; }
 
-    /* ── Payment Methods Info ── */
     .payment-methods {
       margin-top: 20px;
       text-align: center;
@@ -220,7 +208,6 @@
       font-weight: 600;
     }
 
-    /* ── Loading State ── */
     .loading-overlay {
       display: none;
       position: fixed;
@@ -243,7 +230,6 @@
       font-size: 14px;
     }
 
-    /* ── Success/Error Toast ── */
     .toast {
       position: fixed;
       bottom: 24px;
@@ -267,13 +253,10 @@
   </style>
   <link rel="stylesheet" href="main.css" />
   <script src="config.js"></script>
-  
-  <!-- ✅ MIDTRANS SNAP JS (SANDBOX) -->
   <script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="Mid-client-bOpWXR3j5IqTiJHI"></script>
 </head>
 <body>
 
-<!-- Loading Overlay -->
 <div class="loading-overlay" id="loadingOverlay">
   <div class="loading-box">
     <div style="width: 32px; height: 32px; border: 4px solid #e5e7eb; border-top-color: #00AED6; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto;"></div>
@@ -281,7 +264,6 @@
   </div>
 </div>
 
-<!-- Toast Notification -->
 <div class="toast" id="toast"></div>
 
 <div class="page">
@@ -290,20 +272,17 @@
     <p class="card-subtitle" id="card-subtitle">—</p>
     <p class="card-antrian" id="card-antrian">No. Antrian : —</p>
 
-    <!-- Tunai illustration (shown for tunai) -->
     <img class="tunai-img" id="tunai-img"
       src="assets/review-order/tunai-illustration.svg"
       onerror="this.style.display='none'"
       alt="Tunai" style="display:none;">
 
-    <!-- QRIS code (shown for qris/digital payment) -->
     <div class="qris-wrap" id="qris-wrap" style="display:none;">
-      <img src="assets/payment/qris.png"
+      <img src="/assets/payment/qris.png"
         onerror="this.outerHTML='<p class=\'qris-placeholder\'>QRIS / E-Wallet</p>'"
         alt="QRIS">
     </div>
 
-    <!-- Order summary -->
     <div class="summary">
       <div class="summary-col">
         <span class="summary-label">Total Item</span>
@@ -315,46 +294,36 @@
       </div>
     </div>
 
-    <!-- ✅ MIDTRANS PAYMENT BUTTON -->
     <button class="pay-button" id="payButton">Bayar Sekarang</button>
 
-    <!-- Payment methods info -->
     <div class="payment-methods">
-      <span>QRIS</span>
-      <span>GoPay</span>
-      <span>OVO</span>
-      <span>DANA</span>
-      <span>VA Bank</span>
+      <span>QRIS</span><span>GoPay</span><span>OVO</span><span>DANA</span><span>VA Bank</span>
     </div>
   </div>
 
-  <button class="ubah-btn" onclick="window.history.back()">
-    ◀ Ubah Opsi Pembayaran
-  </button>
+  <button class="ubah-btn" onclick="window.history.back()">◀ Ubah Opsi Pembayaran</button>
 </div>
 
 <script>
   // ✅ FORMAT RUPIAH
   function formatRp(n) {
-    if (!n) return 'Rp. 0';
-    return 'Rp. ' + Number(n).toLocaleString('id-ID');
+    if (!n && n !== 0) return 'Rp. 0';
+    const num = typeof n === 'string' ? parseFloat(n) : Number(n);
+    return 'Rp. ' + num.toLocaleString('id-ID');
   }
 
-  // ✅ SHOW TOAST NOTIFICATION
+  // ✅ TOAST NOTIFICATION
   function showToast(message, type = 'info') {
     const toast = document.getElementById('toast');
     toast.textContent = message;
     toast.className = 'toast ' + type + ' show';
-    setTimeout(() => {
-      toast.classList.remove('show');
-    }, 3000);
+    setTimeout(() => toast.classList.remove('show'), 3000);
   }
 
-  // ✅ SHOW/HIDE LOADING
+  // ✅ LOADING STATE
   function setLoading(isLoading) {
     const overlay = document.getElementById('loadingOverlay');
     const btn = document.getElementById('payButton');
-    
     if (isLoading) {
       overlay.classList.add('active');
       btn.disabled = true;
@@ -368,45 +337,23 @@
 
   // ✅ CREATE MIDTRANS TRANSACTION
   async function createMidtransTransaction(orderData) {
-    try {
-      const response = await fetch(API_CONFIG.BASE_URL + '/payment/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(orderData)
-      });
-
-      if (!response.ok) {
-        throw new Error('HTTP ' + response.status);
-      }
-
-      const result = await response.json();
-      return result;
-    } catch (error) {
-      console.error('Create transaction error:', error);
-      throw error;
-    }
+    const response = await fetch(API_CONFIG.BASE_URL + '/payment/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(orderData)
+    });
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    return await response.json();
   }
 
-  // ✅ HANDLE PAYMENT WITH MIDTRANS
+  // ✅ HANDLE PAYMENT
   async function handlePayment() {
-    // Ambil data dari localStorage (cart)
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    
-    if (cart.length === 0) {
-      showToast('Keranjang kosong!', 'error');
-      return;
-    }
+    if (cart.length === 0) { showToast('Keranjang kosong!', 'error'); return; }
 
-    // Hitung total
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    
-    // Generate order ID unik
     const orderId = 'ORDER-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6);
     
-    // Format items untuk Midtrans
     const items = cart.map(item => ({
       id: item.id ? item.id.toString() : 'item-' + Math.random().toString(36).substr(2, 6),
       name: item.name || 'Item',
@@ -414,7 +361,6 @@
       quantity: item.quantity || 1
     }));
 
-    // Data untuk API
     const paymentData = {
       order_id: orderId,
       gross_amount: Math.round(total),
@@ -425,55 +371,22 @@
     };
 
     setLoading(true);
-
     try {
-      // Request ke backend Laravel
       const result = await createMidtransTransaction(paymentData);
-
       if (result.success && result.snap_token) {
-        // ✅ Buka popup Midtrans
         snap.pay(result.snap_token, {
-          // ✅ Pembayaran berhasil
-          onSuccess: function(result) {
+          onSuccess: function(res) {
             showToast('Pembayaran berhasil! 🎉', 'success');
-            
-            // Clear cart
             localStorage.removeItem('cart');
-            
-            // Simpan info order untuk referensi
-            sessionStorage.setItem('lastOrder', JSON.stringify({
-              order_id: result.order_id,
-              status: 'paid',
-              payment_type: result.payment_type
-            }));
-            
-            // Redirect ke halaman order setelah 2 detik
-            setTimeout(() => {
-              window.location.href = 'order.html';
-            }, 2000);
+            sessionStorage.setItem('lastOrder', JSON.stringify({ order_id: res.order_id, status: 'paid', payment_type: res.payment_type }));
+            setTimeout(() => window.location.href = 'order.html', 2000);
           },
-          
-          // ✅ Pembayaran menunggu (misal: transfer VA)
-          onPending: function(result) {
+          onPending: function(res) {
             showToast('Menunggu pembayaran... Cek email/VA', 'info');
-            
-            // Simpan pending order
-            sessionStorage.setItem('pendingOrder', JSON.stringify({
-              order_id: result.order_id,
-              status: 'pending'
-            }));
+            sessionStorage.setItem('pendingOrder', JSON.stringify({ order_id: res.order_id, status: 'pending' }));
           },
-          
-          // ✅ Pembayaran gagal
-          onError: function(result) {
-            showToast('Pembayaran gagal. Silakan coba lagi.', 'error');
-          },
-          
-          // ✅ User menutup popup
-          onClose: function() {
-            console.log('User menutup popup pembayaran');
-            // Tidak lakukan apa-apa, biarkan user tetap di halaman
-          }
+          onError: function() { showToast('Pembayaran gagal. Silakan coba lagi.', 'error'); },
+          onClose: function() { console.log('Popup ditutup'); }
         });
       } else {
         throw new Error(result.message || 'Gagal membuat transaksi');
@@ -486,20 +399,19 @@
     }
   }
 
-  // ✅ INIT PAGE ON LOAD
+  // ✅ INIT PAGE
   document.addEventListener('DOMContentLoaded', function() {
-    // ── Load payment method & order data ─────────────────────────────────
     const method = sessionStorage.getItem('paymentMethod') || 'QRIS';
     const order = JSON.parse(sessionStorage.getItem('order') || '{}');
     const antrian = sessionStorage.getItem('antrian') || '#A001';
 
-    // ── Update Header ───────────────────────────────────────────────────
+    // Update Header
     if (method.toLowerCase() === 'tunai') {
       document.getElementById('card-title').textContent = 'Tunai';
       document.getElementById('card-subtitle').textContent = '*Bayar langsung di kasir';
       document.getElementById('tunai-img').style.display = '';
       document.getElementById('qris-wrap').style.display = 'none';
-      document.getElementById('payButton').style.display = 'none'; // Hide pay button for tunai
+      document.getElementById('payButton').style.display = 'none';
     } else {
       document.getElementById('card-title').textContent = 'Scan QRIS / E-Wallet';
       document.getElementById('card-subtitle').textContent = '*Scan melalui GoPay, OVO, DANA, atau Mobile Banking';
@@ -507,48 +419,45 @@
       document.getElementById('qris-wrap').style.display = '';
       document.getElementById('payButton').style.display = '';
     }
-
     document.getElementById('card-antrian').textContent = `No. Antrian : ${antrian}`;
 
-    // ── Update Summary ──────────────────────────────────────────────────
-    const total = order.total_amount || 0;
-    
-    let itemLabel = '—';
-    if (order.foods && order.foods.length > 0) {
-      const firstItem = order.foods[0];
-      const firstName = firstItem.food ? firstItem.food.name : (firstItem.name || 'Item');
-      
-      if (order.foods.length === 1) {
-        itemLabel = firstItem.quantity > 1 ? 
-          `${firstName} x${firstItem.quantity}` : 
-          firstName;
-      } else {
-        itemLabel = `${firstName} & ${order.foods.length - 1} lainnya`;
-      }
+    // ✅ UPDATE SUMMARY - DINAMIS (TIDAK HARDCODE!)
+    // Prioritas: order.total_price > order.total_amount > hitung dari cart
+    let total = 0;
+    if (order.total_price) {
+      total = parseFloat(order.total_price);
+    } else if (order.total_amount) {
+      total = parseFloat(order.total_amount);
+    } else {
+      // Fallback: hitung dari cart di localStorage
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     }
 
-    document.getElementById('summary-items').textContent = itemLabel;
+    // Update total display
     document.getElementById('summary-total').textContent = formatRp(total);
 
-    // ── Attach Pay Button Event ─────────────────────────────────────────
-    const payButton = document.getElementById('payButton');
-    if (payButton) {
-      payButton.addEventListener('click', handlePayment);
-    }
-
-    // ── Fallback: If no order data, use cart from localStorage ─────────
-    if (!order.foods || order.foods.length === 0) {
+    // Update item label
+    let itemLabel = '—';
+    const foods = order.foods || [];
+    if (foods.length > 0) {
+      const firstItem = foods[0];
+      const firstName = firstItem.food ? firstItem.food.name : (firstItem.name || 'Item');
+      const qty = firstItem.quantity || firstItem.pivot?.quantity || 1;
+      itemLabel = foods.length === 1 ? `${firstName} x${qty}` : `${firstName} & ${foods.length - 1} lainnya`;
+    } else {
+      // Fallback dari cart
       const cart = JSON.parse(localStorage.getItem('cart') || '[]');
       if (cart.length > 0) {
-        const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        document.getElementById('summary-total').textContent = formatRp(cartTotal);
-        
         const firstItem = cart[0];
-        document.getElementById('summary-items').textContent = 
-          cart.length === 1 ? `${firstItem.name} x${firstItem.quantity}` : 
-          `${firstItem.name} & ${cart.length - 1} lainnya`;
+        itemLabel = cart.length === 1 ? `${firstItem.name} x${firstItem.quantity}` : `${firstItem.name} & ${cart.length - 1} lainnya`;
       }
     }
+    document.getElementById('summary-items').textContent = itemLabel;
+
+    // Attach pay button
+    const payButton = document.getElementById('payButton');
+    if (payButton) payButton.addEventListener('click', handlePayment);
   });
 </script>
 </body>
