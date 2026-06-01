@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Payment - OrderHere</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; -ms-overflow-style: none; scrollbar-width: none; }
     *::-webkit-scrollbar { display: none; }
@@ -13,17 +14,19 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      background: var(--primary-gradient);
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 20px;
     }
 
     .page {
-      width: 900px;
+      width: 100%;
+      max-width: 900px;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      padding: 40px 48px;
+      padding: 40px 24px;
       gap: 0;
     }
 
@@ -37,6 +40,7 @@
       flex-direction: column;
       align-items: center;
       gap: 0;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
     }
 
     /* ── Header ── */
@@ -109,6 +113,7 @@
       justify-content: space-between;
       align-items: flex-start;
       gap: 16px;
+      margin-bottom: 24px;
     }
 
     .summary-col { display: flex; flex-direction: column; gap: 4px; }
@@ -127,6 +132,61 @@
 
     .summary-col.right { text-align: right; }
 
+    /* ── Payment Button ── */
+    .pay-button {
+      width: 100%;
+      max-width: 320px;
+      padding: 16px 24px;
+      background: linear-gradient(135deg, #00AED6 0%, #007A99 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      margin-top: 12px;
+    }
+
+    .pay-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 174, 214, 0.4);
+    }
+
+    .pay-button:active {
+      transform: translateY(0);
+    }
+
+    .pay-button:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .pay-button.loading {
+      position: relative;
+      color: transparent;
+    }
+
+    .pay-button.loading::after {
+      content: "";
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      top: 50%;
+      left: 50%;
+      margin: -10px 0 0 -10px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
     /* ── Bottom link ── */
     .ubah-btn {
       margin-top: 28px;
@@ -143,13 +203,88 @@
       align-self: flex-start;
     }
     .ubah-btn:hover { opacity: 0.75; }
+
+    /* ── Payment Methods Info ── */
+    .payment-methods {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .payment-methods span {
+      display: inline-block;
+      margin: 2px 4px;
+      padding: 4px 8px;
+      background: #e5e7eb;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+
+    /* ── Loading State ── */
+    .loading-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .loading-overlay.active { display: flex; }
+    .loading-box {
+      background: white;
+      padding: 24px 32px;
+      border-radius: 16px;
+      text-align: center;
+    }
+    .loading-box p {
+      margin-top: 12px;
+      color: #6b7280;
+      font-size: 14px;
+    }
+
+    /* ── Success/Error Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #1f2937;
+      color: white;
+      padding: 14px 24px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      transition: transform 0.3s ease;
+      z-index: 1001;
+      max-width: 90%;
+      text-align: center;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.success { background: #10b981; }
+    .toast.error { background: #ef4444; }
   </style>
   <link rel="stylesheet" href="main.css" />
   <script src="config.js"></script>
+  
+  <!-- ✅ MIDTRANS SNAP JS (SANDBOX) -->
+  <script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="Mid-client-bOpWXR3j5IqTiJHI"></script>
 </head>
 <body>
-<div class="page">
 
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-box">
+    <div style="width: 32px; height: 32px; border: 4px solid #e5e7eb; border-top-color: #00AED6; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto;"></div>
+    <p>Memproses pembayaran...</p>
+  </div>
+</div>
+
+<!-- Toast Notification -->
+<div class="toast" id="toast"></div>
+
+<div class="page">
   <div class="card">
     <p class="card-title" id="card-title">—</p>
     <p class="card-subtitle" id="card-subtitle">—</p>
@@ -161,10 +296,10 @@
       onerror="this.style.display='none'"
       alt="Tunai" style="display:none;">
 
-    <!-- QRIS code (shown for qris) -->
+    <!-- QRIS code (shown for qris/digital payment) -->
     <div class="qris-wrap" id="qris-wrap" style="display:none;">
       <img src="assets/payment/qris.png"
-        onerror="this.outerHTML='<p class=\'qris-placeholder\'>QRIS</p>'"
+        onerror="this.outerHTML='<p class=\'qris-placeholder\'>QRIS / E-Wallet</p>'"
         alt="QRIS">
     </div>
 
@@ -179,61 +314,242 @@
         <span class="summary-value" id="summary-total">Rp. 0</span>
       </div>
     </div>
+
+    <!-- ✅ MIDTRANS PAYMENT BUTTON -->
+    <button class="pay-button" id="payButton">Bayar Sekarang</button>
+
+    <!-- Payment methods info -->
+    <div class="payment-methods">
+      <span>QRIS</span>
+      <span>GoPay</span>
+      <span>OVO</span>
+      <span>DANA</span>
+      <span>VA Bank</span>
+    </div>
   </div>
 
   <button class="ubah-btn" onclick="window.history.back()">
     ◀ Ubah Opsi Pembayaran
   </button>
-
 </div>
 
 <script>
-  // ✅ LOAD DATA DARI SESSIONSTORAGE (DARI RESPONSE BACKEND)
-  const method = sessionStorage.getItem('paymentMethod') || 'TUNAI';
-  const order = JSON.parse(sessionStorage.getItem('order') || '{}');
-  const antrian = sessionStorage.getItem('antrian') || '—';
-
-  // ── Header ──────────────────────────────────────────
-  if (method.toLowerCase() === 'qris') {
-    document.getElementById('card-title').textContent    = 'Scan QRIS';
-    document.getElementById('card-subtitle').textContent = '*Scan melalui aplikasi bank atau e-wallet';
-    document.getElementById('qris-wrap').style.display  = '';
-    document.getElementById('tunai-img').style.display  = 'none';
-  } else {
-    document.getElementById('card-title').textContent    = 'Tunai';
-    document.getElementById('card-subtitle').textContent = '*Bayar langsung di kasir';
-    document.getElementById('tunai-img').style.display  = '';
-    document.getElementById('qris-wrap').style.display  = 'none';
-  }
-
-  document.getElementById('card-antrian').textContent = `No. Antrian : ${antrian}`;
-
-  // ── FORMAT RUPIAH ────────────────────────────
+  // ✅ FORMAT RUPIAH
   function formatRp(n) {
-    return 'Rp. ' + n.toLocaleString('id-ID');
+    if (!n) return 'Rp. 0';
+    return 'Rp. ' + Number(n).toLocaleString('id-ID');
   }
 
-  // ── Summary ─────────────────────────────────────────
-  // ✅ Ambil total dari response backend (lebih akurat)
-  const total = order.total_amount || 0;
-  
-  // ✅ Item names summary dari data backend
-  let itemLabel = '—';
-  if (order.foods && order.foods.length > 0) {
-    const firstItem = order.foods[0];
-    const firstName = firstItem.food ? firstItem.food.name : 'Item';
+  // ✅ SHOW TOAST NOTIFICATION
+  function showToast(message, type = 'info') {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.className = 'toast ' + type + ' show';
+    setTimeout(() => {
+      toast.classList.remove('show');
+    }, 3000);
+  }
+
+  // ✅ SHOW/HIDE LOADING
+  function setLoading(isLoading) {
+    const overlay = document.getElementById('loadingOverlay');
+    const btn = document.getElementById('payButton');
     
-    if (order.foods.length === 1) {
-      itemLabel = firstItem.quantity > 1 ? 
-        `${firstName} x${firstItem.quantity}` : 
-        firstName;
+    if (isLoading) {
+      overlay.classList.add('active');
+      btn.disabled = true;
+      btn.classList.add('loading');
     } else {
-      itemLabel = `${firstName} & ${order.foods.length - 1} lainnya`;
+      overlay.classList.remove('active');
+      btn.disabled = false;
+      btn.classList.remove('loading');
     }
   }
 
-  document.getElementById('summary-items').textContent = itemLabel;
-  document.getElementById('summary-total').textContent = formatRp(total);
+  // ✅ CREATE MIDTRANS TRANSACTION
+  async function createMidtransTransaction(orderData) {
+    try {
+      const response = await fetch(API_CONFIG.BASE_URL + '/payment/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(orderData)
+      });
+
+      if (!response.ok) {
+        throw new Error('HTTP ' + response.status);
+      }
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error('Create transaction error:', error);
+      throw error;
+    }
+  }
+
+  // ✅ HANDLE PAYMENT WITH MIDTRANS
+  async function handlePayment() {
+    // Ambil data dari localStorage (cart)
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    
+    if (cart.length === 0) {
+      showToast('Keranjang kosong!', 'error');
+      return;
+    }
+
+    // Hitung total
+    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    
+    // Generate order ID unik
+    const orderId = 'ORDER-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6);
+    
+    // Format items untuk Midtrans
+    const items = cart.map(item => ({
+      id: item.id ? item.id.toString() : 'item-' + Math.random().toString(36).substr(2, 6),
+      name: item.name || 'Item',
+      price: Math.round(item.price),
+      quantity: item.quantity || 1
+    }));
+
+    // Data untuk API
+    const paymentData = {
+      order_id: orderId,
+      gross_amount: Math.round(total),
+      customer_name: 'Customer OrderHere',
+      customer_email: 'customer@orderhere.com',
+      phone: '081234567890',
+      items: items
+    };
+
+    setLoading(true);
+
+    try {
+      // Request ke backend Laravel
+      const result = await createMidtransTransaction(paymentData);
+
+      if (result.success && result.snap_token) {
+        // ✅ Buka popup Midtrans
+        snap.pay(result.snap_token, {
+          // ✅ Pembayaran berhasil
+          onSuccess: function(result) {
+            showToast('Pembayaran berhasil! 🎉', 'success');
+            
+            // Clear cart
+            localStorage.removeItem('cart');
+            
+            // Simpan info order untuk referensi
+            sessionStorage.setItem('lastOrder', JSON.stringify({
+              order_id: result.order_id,
+              status: 'paid',
+              payment_type: result.payment_type
+            }));
+            
+            // Redirect ke halaman order setelah 2 detik
+            setTimeout(() => {
+              window.location.href = 'order.html';
+            }, 2000);
+          },
+          
+          // ✅ Pembayaran menunggu (misal: transfer VA)
+          onPending: function(result) {
+            showToast('Menunggu pembayaran... Cek email/VA', 'info');
+            
+            // Simpan pending order
+            sessionStorage.setItem('pendingOrder', JSON.stringify({
+              order_id: result.order_id,
+              status: 'pending'
+            }));
+          },
+          
+          // ✅ Pembayaran gagal
+          onError: function(result) {
+            showToast('Pembayaran gagal. Silakan coba lagi.', 'error');
+          },
+          
+          // ✅ User menutup popup
+          onClose: function() {
+            console.log('User menutup popup pembayaran');
+            // Tidak lakukan apa-apa, biarkan user tetap di halaman
+          }
+        });
+      } else {
+        throw new Error(result.message || 'Gagal membuat transaksi');
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      showToast('Error: ' + error.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ✅ INIT PAGE ON LOAD
+  document.addEventListener('DOMContentLoaded', function() {
+    // ── Load payment method & order data ─────────────────────────────────
+    const method = sessionStorage.getItem('paymentMethod') || 'QRIS';
+    const order = JSON.parse(sessionStorage.getItem('order') || '{}');
+    const antrian = sessionStorage.getItem('antrian') || '#A001';
+
+    // ── Update Header ───────────────────────────────────────────────────
+    if (method.toLowerCase() === 'tunai') {
+      document.getElementById('card-title').textContent = 'Tunai';
+      document.getElementById('card-subtitle').textContent = '*Bayar langsung di kasir';
+      document.getElementById('tunai-img').style.display = '';
+      document.getElementById('qris-wrap').style.display = 'none';
+      document.getElementById('payButton').style.display = 'none'; // Hide pay button for tunai
+    } else {
+      document.getElementById('card-title').textContent = 'Scan QRIS / E-Wallet';
+      document.getElementById('card-subtitle').textContent = '*Scan melalui GoPay, OVO, DANA, atau Mobile Banking';
+      document.getElementById('tunai-img').style.display = 'none';
+      document.getElementById('qris-wrap').style.display = '';
+      document.getElementById('payButton').style.display = '';
+    }
+
+    document.getElementById('card-antrian').textContent = `No. Antrian : ${antrian}`;
+
+    // ── Update Summary ──────────────────────────────────────────────────
+    const total = order.total_amount || 0;
+    
+    let itemLabel = '—';
+    if (order.foods && order.foods.length > 0) {
+      const firstItem = order.foods[0];
+      const firstName = firstItem.food ? firstItem.food.name : (firstItem.name || 'Item');
+      
+      if (order.foods.length === 1) {
+        itemLabel = firstItem.quantity > 1 ? 
+          `${firstName} x${firstItem.quantity}` : 
+          firstName;
+      } else {
+        itemLabel = `${firstName} & ${order.foods.length - 1} lainnya`;
+      }
+    }
+
+    document.getElementById('summary-items').textContent = itemLabel;
+    document.getElementById('summary-total').textContent = formatRp(total);
+
+    // ── Attach Pay Button Event ─────────────────────────────────────────
+    const payButton = document.getElementById('payButton');
+    if (payButton) {
+      payButton.addEventListener('click', handlePayment);
+    }
+
+    // ── Fallback: If no order data, use cart from localStorage ─────────
+    if (!order.foods || order.foods.length === 0) {
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      if (cart.length > 0) {
+        const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        document.getElementById('summary-total').textContent = formatRp(cartTotal);
+        
+        const firstItem = cart[0];
+        document.getElementById('summary-items').textContent = 
+          cart.length === 1 ? `${firstItem.name} x${firstItem.quantity}` : 
+          `${firstItem.name} & ${cart.length - 1} lainnya`;
+      }
+    }
+  });
 </script>
 </body>
 </html>
