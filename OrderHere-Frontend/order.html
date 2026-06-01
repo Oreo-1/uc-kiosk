@@ -333,6 +333,7 @@
     }
     .btn-tambah:hover { opacity: 0.9; }
     .btn-tambah:active { transform: scale(0.98); }
+
   </style>
   <link rel="stylesheet" href="main.css" />
   <script src="config.js"></script>
@@ -437,6 +438,7 @@
   let sheetQty = 1;
   let selectedSpice = null;
   let selectedAddons = [];
+  let recommendationRaw = []; // Simpan data API rekomendasi
   
   // ✅ LOAD CART & DINING TYPE DARI LOCALSTORAGE
   let cart = getCart();
@@ -449,7 +451,18 @@
       const res = await apiFetch('/foods?per_page=100');
       allFoods = res.data;
 
-      // 2. ✅ EKSTRAK VENDOR OTOMATIS DARI DATA MAKANAN
+      // 2. Tarik Data Rekomendasi dari API Eksternal
+      try {
+        const recRes = await fetch("http://103.185.52.14:8067/test-recommend/");
+        const recJson = await recRes.json();
+        if (recJson.status === "success") {
+          recommendationRaw = recJson.data;
+        }
+      } catch (err) {
+        console.error('Failed to fetch recommendations API:', err);
+      }
+
+      // 3. ✅ EKSTRAK VENDOR OTOMATIS DARI DATA MAKANAN
       const vendorMap = new Map();
       allFoods.forEach(food => {
         if (food.vendor && !vendorMap.has(food.vendor.id)) {
@@ -458,7 +471,7 @@
       });
       allVendors = Array.from(vendorMap.values());
 
-      // 3. Render Vendor & Makanan
+      // 4. Render Vendor & Makanan
       renderVendors(allVendors);
       if (allVendors.length > 0) {
         currentVendorId = allVendors[0].id; // Set default vendor
@@ -505,18 +518,44 @@
     const vendor = allVendors.find(v => v.id === vendorId);
     if(vendor) document.getElementById('vendor-title').textContent = vendor.name;
 
-    renderFoods(allFoods.filter(f => f.vendor_id === vendorId));
+    // Default: tampilkan 'Semua' saat ganti vendor
+    setFilter(document.querySelector('.filter-tag'), 'all');
   }
 
   function setFilter(el, category) {
     document.querySelectorAll('.filter-tag').forEach(t => t.classList.remove('active'));
     el.classList.add('active');
 
-    const filtered = allFoods.filter(f => {
-      const matchVendor = f.vendor_id === currentVendorId;
-      const matchCat = category === 'all' ? true : CATEGORY_MAP[f.type] === category;
-      return matchVendor && matchCat;
-    });
+    let filtered = [];
+
+    if (category === 'paket') {
+      // LOGIK REKOMENDASI (TAMPILKAN CARD BERDASARKAN API REKOMENDASI)
+      const recVendor = recommendationRaw.find(r => r.vendor == currentVendorId);
+      if (recVendor) {
+        let recNames = [];
+        // Ambil nama dari components
+        const comps = recVendor.recommendations.components;
+        Object.keys(comps).forEach(key => {
+          comps[key].items.forEach(item => recNames.push(item["Nama Menu"].toLowerCase()));
+        });
+        // Ambil nama dari standalone
+        recVendor.recommendations.standalone.forEach(item => recNames.push(item["Nama Menu"].toLowerCase()));
+
+        // Filter allFoods yang namanya ada di list rekomendasi API
+        filtered = allFoods.filter(f => 
+          f.vendor_id === currentVendorId && 
+          recNames.includes(f.name.toLowerCase())
+        );
+      }
+    } else {
+      // LOGIK FILTER BIASA (MAKANAN/MINUMAN/SNACK)
+      filtered = allFoods.filter(f => {
+        const matchVendor = f.vendor_id === currentVendorId;
+        const matchCat = category === 'all' ? true : CATEGORY_MAP[f.type] === category;
+        return matchVendor && matchCat;
+      });
+    }
+
     renderFoods(filtered);
   }
 
