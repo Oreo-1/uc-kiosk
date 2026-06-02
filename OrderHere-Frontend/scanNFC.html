@@ -77,6 +77,38 @@
         font-size: 14px;
         color: #374151;
       }
+
+      .overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.65);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+      }
+
+      .overlay-content {
+        background: white;
+        padding: 30px;
+        border-radius: 20px;
+        text-align: center;
+        width: 280px;
+      }
+
+      .checkmark {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 15px;
+        border-radius: 50%;
+        background: #22c55e;
+        color: white;
+        font-size: 42px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-weight: bold;
+      }
     </style>
   </head>
 
@@ -102,6 +134,14 @@
       <button id="scanBtn">Mulai Scan NFC</button>
 
       <div class="status" id="status">Status: menunggu scan...</div>
+    </div>
+
+    <div id="successOverlay" class="overlay">
+      <div class="overlay-content">
+        <div class="checkmark">✓</div>
+        <h2>NFC Berhasil</h2>
+        <p>Mengalihkan ke kamera...</p>
+      </div>
     </div>
 
     <script>
@@ -164,16 +204,15 @@
 
             localStorage.setItem("user_id", user_id);
 
-            status.textContent = "✅ NFC berhasil! masuk kamera...";
+            status.textContent = "✅ NFC berhasil!";
 
-            // stop scan biar tidak double trigger
-            if (ndef && ndef.onreading) {
-              ndef.onreading = null;
-            }
+            navigator.vibrate?.(200);
+
+            document.getElementById("successOverlay").style.display = "flex";
 
             setTimeout(() => {
               window.location.href = "camera.html";
-            }, 800);
+            }, 2000);
           };
         } catch (err) {
           console.error(err);
