@@ -131,8 +131,7 @@
         </lottie-player>
       </div>
 
-      <button id="scanBtn">Mulai Scan NFC</button>
-
+      <button id="scanBtn">Batalkan Scan</button>
       <div class="status" id="status">Status: menunggu scan...</div>
     </div>
 
@@ -151,64 +150,55 @@
       let scanning = false;
       let ndef;
 
-      btn.addEventListener("click", async () => {
+      async function startNFCScan() {
         if (!("NDEFReader" in window)) {
           status.textContent = "❌ NFC tidak didukung di device ini";
+          btn.style.display = "none";
           return;
         }
 
-        if (scanning) return;
-
         try {
           scanning = true;
-          btn.disabled = true;
 
           ndef = new NDEFReader();
           await ndef.scan();
 
-          status.textContent = "📡 Mendengarkan NFC... tempelkan kartu";
+          status.textContent = "📡 Tempelkan kartu NFC...";
+          btn.textContent = "Batalkan Scan";
 
           ndef.onreading = (event) => {
-            console.log("RAW NFC EVENT:", event);
-
             let user_id = null;
 
             for (const record of event.message.records) {
-              const decoder = new TextDecoder();
-
-              console.log("Record type:", record.recordType);
-              console.log("Raw data:", record.data);
-
-              // 🔥 lebih fleksibel (tidak hanya text)
               try {
+                const decoder = new TextDecoder();
                 const decoded = decoder.decode(record.data);
-                console.log("Decoded:", decoded);
 
                 if (decoded) {
-                  user_id = decoded;
+                  user_id = decoded.trim();
                   break;
                 }
               } catch (e) {
-                console.log("Decode error:", e);
+                console.log(e);
               }
             }
 
             if (!user_id) {
               status.textContent = "⚠ NFC terbaca tapi data kosong";
-              scanning = false;
-              btn.disabled = false;
               return;
             }
 
-            console.log("USER ID OK:", user_id);
-
             localStorage.setItem("user_id", user_id);
-
-            status.textContent = "✅ NFC berhasil!";
 
             navigator.vibrate?.(200);
 
             document.getElementById("successOverlay").style.display = "flex";
+
+            document.querySelector("#successOverlay h2").textContent =
+              "NFC Berhasil Terscan";
+
+            document.querySelector("#successOverlay p").textContent =
+              "Mengalihkan ke kamera...";
 
             setTimeout(() => {
               window.location.href = "camera.html";
@@ -216,11 +206,23 @@
           };
         } catch (err) {
           console.error(err);
-          status.textContent = "❌ Gagal scan NFC: " + err.message;
-
-          scanning = false;
-          btn.disabled = false;
+          status.textContent = "❌ Gagal scan NFC";
         }
+      }
+
+      // otomatis scan saat halaman dibuka
+      window.addEventListener("load", () => {
+        startNFCScan();
+      });
+
+      // tombol menjadi batal
+      btn.addEventListener("click", () => {
+        if (!scanning) return;
+
+        window.history.back();
+
+        // atau:
+        // window.location.href = "index.html";
       });
     </script>
   </body>
