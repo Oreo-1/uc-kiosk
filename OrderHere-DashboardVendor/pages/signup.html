@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sign Up - Chick on Cup</title>
+
+    <!-- FONT AWESOME -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Segoe UI", sans-serif;
+      }
+
+      body {
+        background: #cccccc;
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .container {
+        width: 100%;
+        max-width: 1000px;
+        min-height: 100vh;
+        background: white;
+        display: flex;
+        overflow: hidden;
+      }
+
+      .left-side {
+        width: 50%;
+        background: linear-gradient(180deg, #ffa83f 0%, #ff5e25 100%);
+        color: white;
+        padding: 60px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      .brand {
+        font-size: 42px;
+        font-weight: 800;
+        margin-bottom: 20px;
+      }
+
+      .left-side h2 {
+        font-size: 36px;
+        margin-bottom: 15px;
+      }
+
+      .left-side p {
+        font-size: 16px;
+        line-height: 1.7;
+      }
+
+      .right-side {
+        width: 50%;
+        padding: 50px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .form-container {
+        width: 100%;
+        max-width: 360px;
+      }
+
+      .title {
+        background: linear-gradient(90deg, #ffa83f 0%, #ff5e25 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-size: 38px;
+        font-weight: 800;
+        margin-bottom: 10px;
+      }
+
+      .subtitle {
+        color: #666;
+        margin-bottom: 30px;
+      }
+
+      .input-group {
+        margin-bottom: 18px;
+      }
+
+      .input-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .input-box {
+        position: relative;
+      }
+
+      .input-box i {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #999;
+      }
+
+      .input-box input {
+        width: 100%;
+        padding: 14px 14px 14px 45px;
+        border-radius: 14px;
+        border: 1.5px solid #eee;
+        background: #fafafa;
+        outline: none;
+        font-size: 14px;
+      }
+
+      .input-box input:focus {
+        border-color: #ff8a35;
+        background: white;
+      }
+
+      .btn {
+        width: 100%;
+        padding: 14px;
+        border: none;
+        border-radius: 14px;
+        background: linear-gradient(90deg, #ffa83f 0%, #ff5e25 100%);
+        color: white;
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+        margin-top: 10px;
+      }
+
+      .btn:hover {
+        opacity: 0.9;
+      }
+
+      .switch-text {
+        margin-top: 22px;
+        text-align: center;
+        color: #666;
+      }
+
+      .switch-text a {
+        color: #ff7a2f;
+        text-decoration: none;
+        font-weight: 700;
+      }
+
+      @media (max-width: 768px) {
+        .container {
+          flex-direction: column;
+        }
+
+        .left-side,
+        .right-side {
+          width: 100%;
+        }
+
+        .left-side {
+          min-height: 260px;
+          text-align: center;
+          padding: 40px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <!-- LEFT -->
+      <div class="left-side">
+
+        <h2>Create Account ✨</h2>
+
+        <p>
+          Daftar sekarang dan mulai pesan makanan favoritmu dengan mudah.
+        </p>
+      </div>
+
+      <!-- RIGHT -->
+      <div class="right-side">
+        <div class="form-container">
+          <div class="title">Sign Up</div>
+
+          <div class="subtitle">
+            Create your new account
+          </div>
+
+          <form>
+            <div class="input-group">
+              <label>Nama Lengkap</label>
+
+              <div class="input-box">
+                <i class="fa fa-user"></i>
+                <input type="text" placeholder="Masukkan nama lengkap" />
+              </div>
+            </div>
+
+            <div class="input-group">
+              <label>Email</label>
+
+              <div class="input-box">
+                <i class="fa fa-envelope"></i>
+                <input type="email" placeholder="Masukkan email" />
+              </div>
+            </div>
+
+            <div class="input-group">
+              <label>Password</label>
+
+              <div class="input-box">
+                <i class="fa fa-lock"></i>
+                <input type="password" placeholder="Masukkan password" />
+              </div>
+            </div>
+
+            <div class="input-group">
+              <label>Konfirmasi Password</label>
+
+              <div class="input-box">
+                <i class="fa fa-lock"></i>
+                <input
+                  type="password"
+                  placeholder="Konfirmasi password"
+                />
+              </div>
+            </div>
+
+            <button class="btn">Create Account</button>
+          </form>
+
+          <div class="switch-text">
+            Sudah punya akun?
+            <a href="login.html">Login</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

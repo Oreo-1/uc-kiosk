@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pembayaran - Food Order</title>
+  <title>Payment - OrderHere</title>
   <style>
     /* Global Reset */
     * { margin: 0; padding: 0; box-sizing: border-box; -ms-overflow-style: none; scrollbar-width: none; }
@@ -15,32 +15,35 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      background: var(--primary-gradient); /* Pastikan var ini ada di main.css */
+      background: #ffffff; /* ✅ PUTIH POLOS */
+      padding: 20px;
     }
 
     .page {
-      width: 900px;
+      width: 100%;
+      max-width: 900px;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      padding: 40px 48px;
+      padding: 40px 24px;
+      gap: 0;
     }
 
-    /* ── Card ── */
     .card {
       width: 100%;
-      background: #f3f4f6;
+      background: #f8f9fa; /* ✅ Soft white/gray agar kontras */
+      border: 1px solid #e9ecef;
       border-radius: 24px;
       padding: 48px 40px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+      gap: 0;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
     }
 
-    /* ── Header ── */
     .card-title {
       font-size: 32px;
       font-weight: 800;
@@ -64,7 +67,6 @@
       margin-bottom: 28px;
     }
 
-    /* ── Illustrations ── */
     .tunai-img {
       width: 280px;
       height: 220px;
@@ -74,8 +76,8 @@
 
     .qris-wrap {
       width: 100%;
-      background: #fff;
-      border: 2px solid #e5e7eb;
+      background: #ffffff;
+      border: 2px dashed #dee2e6;
       border-radius: 16px;
       aspect-ratio: 1;
       display: flex;
@@ -93,15 +95,25 @@
       object-fit: contain;
     }
 
-    /* ── Summary ── */
+    .qris-placeholder {
+      color: #6b7280;
+      font-size: 13px;
+      font-weight: 600;
+      text-align: center;
+      padding: 20px;
+    }
+
     .summary {
       width: 100%;
-      background: #e5e7eb;
+      background: #ffffff;
+      border: 1px solid #e9ecef;
       border-radius: 14px;
       padding: 16px 24px;
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 24px;
     }
 
     .summary-col { display: flex; flex-direction: column; gap: 4px; }
@@ -118,11 +130,63 @@
       margin-top: 32px;
     }
 
+    .summary-col.right { text-align: right; }
+
+    .pay-button {
+      width: 100%;
+      max-width: 320px;
+      padding: 16px 24px;
+      background: linear-gradient(135deg, #FF9933 0%, #FF6600 100%); /* ✅ ORANGE */
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      margin-top: 12px;
+    }
+
+    .pay-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(255, 102, 0, 0.4);
+    }
+
+    .pay-button:active { transform: translateY(0); }
+
+    .pay-button:disabled {
+      background: #adb5bd;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .pay-button.loading {
+      position: relative;
+      color: transparent;
+    }
+
+    .pay-button.loading::after {
+      content: "";
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      top: 50%;
+      left: 50%;
+      margin: -10px 0 0 -10px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
     .ubah-btn {
       display: flex;
       align-items: center;
       gap: 6px;
-      color: #fff;
+      color: #495057;
       font-size: 16px;
       font-weight: 700;
       cursor: pointer;
@@ -130,32 +194,84 @@
       border: none;
       transition: opacity 0.15s;
     }
-    .ubah-btn:hover { opacity: 0.75; }
+    .ubah-btn:hover { opacity: 0.75; color: #1a1a1a; }
 
-    .ok-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      padding: 16px 40px;
-      background: #1a1a1a;
-      color: #fff;
-      font-size: 16px;
-      font-weight: 800;
-      border: none;
-      border-radius: 14px;
-      cursor: pointer;
-      box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-      transition: transform 0.1s, background 0.2s;
+    .payment-methods {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 12px;
+      color: #6b7280;
     }
-    .ok-btn:hover { background: #333; }
-    .ok-btn:active { transform: scale(0.96); }
+    .payment-methods span {
+      display: inline-block;
+      margin: 2px 4px;
+      padding: 4px 8px;
+      background: #f1f3f5;
+      border: 1px solid #dee2e6;
+      border-radius: 6px;
+      font-weight: 600;
+      color: #495057;
+    }
 
+    .loading-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(255,255,255,0.9);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .loading-overlay.active { display: flex; }
+    .loading-box {
+      background: white;
+      padding: 24px 32px;
+      border-radius: 16px;
+      text-align: center;
+      border: 1px solid #e9ecef;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    .loading-box p {
+      margin-top: 12px;
+      color: #6b7280;
+      font-size: 14px;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #1a1a1a;
+      color: white;
+      padding: 14px 24px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      transition: transform 0.3s ease;
+      z-index: 1001;
+      max-width: 90%;
+      text-align: center;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.success { background: #10b981; }
+    .toast.error { background: #ef4444; }
   </style>
   <link rel="stylesheet" href="main.css" />
   <script src="config.js"></script>
+  <script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="Mid-client-bOpWXR3j5IqTiJHI"></script>
 </head>
 <body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-box">
+    <div style="width: 32px; height: 32px; border: 4px solid #e9ecef; border-top-color: #FF6600; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto;"></div>
+    <p>Memproses pembayaran...</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
 
 <div class="page">
   <div class="card">
@@ -163,17 +279,15 @@
     <p class="card-subtitle" id="card-subtitle">—</p>
     <p class="card-antrian" id="card-antrian">No. Antrian : —</p>
 
-    <!-- Visual Pembayaran -->
     <img class="tunai-img" id="tunai-img"
       src="assets/review-order/tunai-illustration.svg"
       alt="Tunai" style="display:none;">
 
     <div class="qris-wrap" id="qris-wrap" style="display:none;">
-      <img src="assets/payment/qris.png" alt="QRIS" 
-           onerror="this.parentElement.innerHTML='<p>QRIS Image</p>'">
+      <!-- Gambar akan digenerate otomatis oleh JS -->
+      <div class="qris-placeholder">Generating QR Code...</div>
     </div>
 
-    <!-- Summary Box -->
     <div class="summary">
       <div class="summary-col">
         <span class="summary-label">Pesanan</span>
@@ -184,75 +298,234 @@
         <span class="summary-value" id="summary-total">Rp. 0</span>
       </div>
     </div>
+
+    <button class="pay-button" id="payButton">Bayar Sekarang</button>
+
+    <div class="payment-methods">
+      <span>QRIS</span><span>GoPay</span><span>OVO</span><span>DANA</span><span>VA Bank</span>
+    </div>
   </div>
 
-  <!-- Tombol Aksi -->
-  <div class="action-row">
-    <button class="ubah-btn" onclick="window.history.back()">
-      ◀ Ubah Opsi Pembayaran
-    </button>
-
-    <button class="ok-btn" onclick="goToIndex()">
-      Selesai & OK &nbsp;✔
-    </button>
-  </div>
+  <button class="ubah-btn" onclick="window.history.back()">◀ Ubah Opsi Pembayaran</button>
 </div>
 
 <script>
-  // 1. Ambil Data dari Session
-  const method = sessionStorage.getItem('paymentMethod') || 'TUNAI';
-  const order = JSON.parse(sessionStorage.getItem('order') || '{}');
-  const antrian = sessionStorage.getItem('antrian') || '—';
-
-  // 2. Update Tampilan Berdasarkan Metode
-  if (method.toUpperCase() === 'QRIS') {
-    document.getElementById('card-title').textContent = 'Scan QRIS';
-    document.getElementById('card-subtitle').textContent = '*Scan melalui aplikasi bank atau e-wallet';
-    document.getElementById('qris-wrap').style.display = 'flex';
-    document.getElementById('tunai-img').style.display = 'none';
-  } else {
-    document.getElementById('card-title').textContent = 'Bayar Tunai';
-    document.getElementById('card-subtitle').textContent = '*Silakan menuju kasir untuk pembayaran';
-    document.getElementById('tunai-img').style.display = 'block';
-    document.getElementById('qris-wrap').style.display = 'none';
-  }
-
-  document.getElementById('card-antrian').textContent = `No. Antrian : ${antrian}`;
-
-  // 3. Format Rupiah
+  // ✅ FORMAT RUPIAH
   function formatRp(n) {
-    return 'Rp. ' + (n || 0).toLocaleString('id-ID');
+    if (!n && n !== 0) return 'Rp. 0';
+    const num = typeof n === 'string' ? parseFloat(n) : Number(n);
+    return 'Rp. ' + num.toLocaleString('id-ID');
   }
 
-  // 4. Update Summary
-  // Gunakan total_price (sesuai field dari Laravel Controller) atau total_amount
-  const total = order.total_price || order.total_amount || 0;
-  
-  let itemLabel = 'Item Terpilih';
-  if (order.foods && order.foods.length > 0) {
-    const firstItem = order.foods[0];
-    const name = firstItem.name || 'Makanan';
-    
-    if (order.foods.length === 1) {
-      itemLabel = firstItem.pivot ? `${name} x${firstItem.pivot.quantity}` : name;
+  // ✅ TOAST NOTIFICATION
+  function showToast(message, type = 'info') {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.className = 'toast ' + type + ' show';
+    setTimeout(() => toast.classList.remove('show'), 3000);
+  }
+
+  // ✅ LOADING STATE
+  function setLoading(isLoading) {
+    const overlay = document.getElementById('loadingOverlay');
+    const btn = document.getElementById('payButton');
+    if (isLoading) {
+      overlay.classList.add('active');
+      btn.disabled = true;
+      btn.classList.add('loading');
     } else {
-      itemLabel = `${name} & ${order.foods.length - 1} lainnya`;
+      overlay.classList.remove('active');
+      btn.disabled = false;
+      btn.classList.remove('loading');
     }
   }
 
-  document.getElementById('summary-items').textContent = itemLabel;
-  document.getElementById('summary-total').textContent = formatRp(total);
-
-  // 5. Fungsi Navigasi
-  function goToIndex() {
-    // Hapus data temporary agar tidak tertumpuk saat pesan baru
-    sessionStorage.removeItem('order');
-    sessionStorage.removeItem('antrian');
-    sessionStorage.removeItem('paymentMethod');
-    
-    // Kembali ke menu utama
-    window.location.href = 'index.html';
+  // ✅ CREATE MIDTRANS TRANSACTION (UNTUK POPUP)
+  async function createMidtransTransaction(orderData) {
+    const response = await fetch(API_CONFIG.BASE_URL + '/payment/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(orderData)
+    });
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    return await response.json();
   }
+
+  // ✅ HANDLE PAYMENT (TOMBOL BAYAR)
+  async function handlePayment() {
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    if (cart.length === 0) { showToast('Keranjang kosong!', 'error'); return; }
+
+    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const orderId = 'ORDER-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6);
+    
+    const items = cart.map(item => ({
+      id: item.id ? item.id.toString() : 'item-' + Math.random().toString(36).substr(2, 6),
+      name: item.name || 'Item',
+      price: Math.round(item.price),
+      quantity: item.quantity || 1
+    }));
+
+    const paymentData = {
+      order_id: orderId,
+      gross_amount: Math.round(total),
+      customer_name: 'Customer OrderHere',
+      customer_email: 'customer@orderhere.com',
+      phone: '081234567890',
+      items: items
+    };
+
+    setLoading(true);
+    try {
+      const result = await createMidtransTransaction(paymentData);
+      if (result.success && result.snap_token) {
+        snap.pay(result.snap_token, {
+          onSuccess: function(res) {
+            showToast('Pembayaran berhasil! 🎉', 'success');
+            localStorage.removeItem('cart');
+            sessionStorage.setItem('lastOrder', JSON.stringify({ order_id: res.order_id, status: 'paid', payment_type: res.payment_type }));
+            setTimeout(() => window.location.href = 'order.html', 2000);
+          },
+          onPending: function(res) {
+            showToast('Menunggu pembayaran... Cek email/VA', 'info');
+            sessionStorage.setItem('pendingOrder', JSON.stringify({ order_id: res.order_id, status: 'pending' }));
+          },
+          onError: function() { showToast('Pembayaran gagal. Silakan coba lagi.', 'error'); },
+          onClose: function() { console.log('Popup ditutup'); }
+        });
+      } else {
+        throw new Error(result.message || 'Gagal membuat transaksi');
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      showToast('Error: ' + error.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ✅ FUNGSI LOAD QR CODE DINAMIS (UNIK PER ORDER)
+  async function loadDynamicQRCode(order) {
+    const qrWrap = document.getElementById('qris-wrap');
+    
+    // Hitung total
+    let total = 0;
+    if (order.total_price) {
+      total = parseFloat(order.total_price);
+    } else if (order.total_amount) {
+      total = parseFloat(order.total_amount);
+    } else {
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    }
+
+    if (total === 0) {
+      qrWrap.innerHTML = '<p class="qris-placeholder">Total Rp. 0<br>Tambah item dulu</p>';
+      return;
+    }
+
+    // Show loading state
+    qrWrap.innerHTML = '<div style="color: #6b7280; text-align: center; padding: 20px;">Generating QR Code...</div>';
+
+    try {
+      // Generate order ID unik untuk transaksi ini
+      const orderId = 'QRIS-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6);
+      
+      // Request ke backend Laravel
+      const response = await fetch(API_CONFIG.BASE_URL + '/payment/generate-qris', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({
+          order_id: orderId,
+          gross_amount: Math.round(total),
+          customer_name: 'Customer',
+          customer_email: 'customer@orderhere.com'
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.qr_code_url) {
+        // ✅ FIX CACHE: Tambahkan timestamp agar browser tidak menyimpan gambar lama
+        const uniqueQrUrl = result.qr_code_url + '?t=' + new Date().getTime();
+        
+        // Tampilkan QR Code dinamis dari Midtrans
+        qrWrap.innerHTML = `
+          <img src="${uniqueQrUrl}" alt="QR Code Pembayaran" 
+               style="width: 100%; height: 100%; object-fit: contain;">
+        `;
+        
+        // Simpan snap token untuk referensi
+        sessionStorage.setItem('snapToken', result.snap_token);
+        sessionStorage.setItem('currentOrderId', orderId);
+      } else {
+        throw new Error(result.message || 'Gagal generate QR');
+      }
+    } catch (error) {
+      console.error('QR Generation error:', error);
+      // Fallback: tampilkan placeholder jika gagal
+      qrWrap.innerHTML = '<p class="qris-placeholder">Gagal load QR Code<br>Silakan refresh halaman</p>';
+    }
+  }
+
+  // ✅ INIT PAGE
+  document.addEventListener('DOMContentLoaded', async function() {
+    const method = sessionStorage.getItem('paymentMethod') || 'QRIS';
+    const order = JSON.parse(sessionStorage.getItem('order') || '{}');
+    const antrian = sessionStorage.getItem('antrian') || '#A001';
+
+    // Update Header
+    if (method.toLowerCase() === 'tunai') {
+      document.getElementById('card-title').textContent = 'Tunai';
+      document.getElementById('card-subtitle').textContent = '*Bayar langsung di kasir';
+      document.getElementById('tunai-img').style.display = '';
+      document.getElementById('qris-wrap').style.display = 'none';
+      document.getElementById('payButton').style.display = 'none';
+    } else {
+      document.getElementById('card-title').textContent = 'Scan QRIS / E-Wallet';
+      document.getElementById('card-subtitle').textContent = '*Scan melalui GoPay, OVO, DANA, atau Mobile Banking';
+      document.getElementById('tunai-img').style.display = 'none';
+      document.getElementById('qris-wrap').style.display = '';
+      document.getElementById('payButton').style.display = '';
+      
+      // ✅ AUTO-LOAD DYNAMIC QR CODE
+      await loadDynamicQRCode(order);
+    }
+    document.getElementById('card-antrian').textContent = `No. Antrian : ${antrian}`;
+
+    // ✅ UPDATE SUMMARY - DINAMIS
+    let total = 0;
+    if (order.total_price) {
+      total = parseFloat(order.total_price);
+    } else if (order.total_amount) {
+      total = parseFloat(order.total_amount);
+    } else {
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    }
+    document.getElementById('summary-total').textContent = formatRp(total);
+
+    // Update item label
+    let itemLabel = '—';
+    const foods = order.foods || [];
+    if (foods.length > 0) {
+      const firstItem = foods[0];
+      const firstName = firstItem.food ? firstItem.food.name : (firstItem.name || 'Item');
+      const qty = firstItem.quantity || firstItem.pivot?.quantity || 1;
+      itemLabel = foods.length === 1 ? `${firstName} x${qty}` : `${firstName} & ${foods.length - 1} lainnya`;
+    } else {
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      if (cart.length > 0) {
+        const firstItem = cart[0];
+        itemLabel = cart.length === 1 ? `${firstItem.name} x${firstItem.quantity}` : `${firstItem.name} & ${cart.length - 1} lainnya`;
+      }
+    }
+    document.getElementById('summary-items').textContent = itemLabel;
+
+    // Attach pay button
+    const payButton = document.getElementById('payButton');
+    if (payButton) payButton.addEventListener('click', handlePayment);
+  });
 </script>
 
 </body>
