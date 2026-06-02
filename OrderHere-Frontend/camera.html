@@ -23,8 +23,8 @@
       }
 
       video {
-        width: 320px;
-        height: 240px;
+        width: 900px;
+        height: 800px;
         border-radius: 12px;
         border: 2px solid #f97316;
       }
@@ -42,23 +42,24 @@
         color: white;
         font-weight: bold;
         cursor: pointer;
+        font-size: 16px;
       }
 
       .status {
         margin-top: 15px;
-        font-size: 14px;
+        font-size: 18px;
         color: #ccc;
       }
     </style>
   </head>
 
   <body>
-    <h2>Ambil Foto Wajah</h2>
+    <h2>Tunjukkan wajah Anda ke kamera</h2>
 
     <video id="video" autoplay></video>
     <canvas id="canvas"></canvas>
 
-    <button onclick="capture()">Capture & Detect Mood</button>
+    <button onclick="capture()">Foto & Deteksi</button>
 
     <div class="status" id="status">Menunggu kamera...</div>
 
@@ -66,8 +67,6 @@
       const video = document.getElementById("video");
       const canvas = document.getElementById("canvas");
       const statusEl = document.getElementById("status");
-
-      // ambil user_id dari NFC page
       const user_id = localStorage.getItem("user_id");
 
       // =======================
@@ -80,7 +79,7 @@
           });
 
           video.srcObject = stream;
-          statusEl.textContent = "Kamera aktif. Siap capture.";
+          statusEl.textContent = "Kamera siap mengambil foto";
         } catch (err) {
           console.error(err);
           statusEl.textContent = "Gagal akses kamera";
@@ -104,15 +103,12 @@
 
         statusEl.textContent = "Mengirim ke AI...";
 
-        sendToAndreML(imageBase64);
+       //sendTo??(imageBase64);
       }
 
-      // =======================
-      // 3. SEND TO ANDRE ML
-      // =======================
-      async function sendToAndreML(image) {
+      async function sendToAndreML(image) { // ganti nama function ini sesuai ML yang dipakai nanti
         try {
-          const res = await fetch("https://api-andre.com/mood/predict", {
+          const res = await fetch("??", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -140,7 +136,7 @@
       // =======================
       async function sendToBackend(user_id, mood) {
         try {
-          const res = await fetch("https://api-kamu.com/user-mood", {
+          const res = await fetch("", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
