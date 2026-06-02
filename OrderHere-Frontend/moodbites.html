@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Montserrat';
+      background: #ffffff;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .kiosk-wrapper {
+      width: 500px;
+      min-height: 100vh;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+      padding: 48px 24px 32px;
+    }
+
+    /* Header */
+    .header {
+      margin-bottom: 48px;
+    }
+
+    .header .label {
+      font-size: 23px;
+      letter-spacing: 0.04em;
+      color: #f97316;
+      font-weight: 700;
+    }
+
+    .header h1 {
+      font-size: 32px;
+      font-weight: 700;
+      color: #1a1a1a;
+      line-height: 1.15;
+      text-align: center;
+      margin-top: 20%;
+    }
+
+    /* OPTION GRID (SAMA PERSIS INDEX.HTML) */
+    .options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      flex: 1;
+      align-content: center;
+    }
+
+    /* OPTION CARD (DISAMAKAN FULL) */
+    .option-card {
+      border: 2px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 42px 16px 30px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      cursor: pointer;
+      transition: border-color 0.2s, box-shadow 0.2s, transform 0.1s;
+      background: #ffffff;
+      user-select: none;
+    }
+
+    .option-card:hover {
+      border-color: #f97316;
+      box-shadow: 0 4px 16px rgba(249, 115, 22, 0.12);
+    }
+
+    .option-card.selected {
+      border-color: #f97316;
+      box-shadow: 0 4px 20px rgba(249, 115, 22, 0.2);
+    }
+
+    .option-card:active {
+      transform: scale(0.97);
+    }
+
+    /* ICON SAMA PERSIS INDEX */
+    .card-icon {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card-icon img {
+      width: 100px;
+      object-fit: contain;
+    }
+
+    /* LABEL SAMA */
+    .card-label {
+      font-size: 20px;
+      font-weight: 600;
+      color: #f97316;
+      text-align: center;
+      line-height: 1.3;
+    }
+
+    /* CTA */
+    .cta {
+      margin-top: 48px;
+    }
+
+    .btn-pilih {
+      width: 83%;
+      margin: 20px auto;
+      display: block;
+      padding: 18px;
+      border: none;
+      border-radius: 10px;
+      background: #f97316;
+      color: #ffffff;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .btn-pilih:disabled {
+      background: #e5e7eb;
+      color: #9ca3af;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="kiosk-wrapper">
+
+    <!-- Header -->
+    <div class="header">
+      <p class="label">Order Here</p>
+      <h1>Ingin rekomendasi makanan sesuai mood Anda?</h1>
+    </div>
+
+    <!-- Option Cards (SUDAH MATCH INDEX STYLE) -->
+    <div class="options">
+
+      <div class="option-card" onclick="selectOption(this, 'MOODBITES')">
+        <div class="card-icon">
+          <img src="assets/moodbites/yes.png">
+        </div>
+        <span class="card-label">Ya, Gunakan MoodBites</span>
+      </div>
+
+      <div class="option-card" onclick="selectOption(this, 'NO_MOODBITES')">
+        <div class="card-icon">
+          <img src="assets/moodbites/no.png">
+        </div>
+        <span class="card-label">Lewati, Tanpa MoodBites</span>
+      </div>
+
+    </div>
+
+    <!-- CTA -->
+    <div class="cta">
+      <button class="btn-pilih" id="btn-pilih" disabled onclick="handlePilih()">
+        Lanjutkan
+      </button>
+    </div>
+
+  </div>
+
+  <script>
+    let selected = null;
+
+    function selectOption(el, type) {
+      selected = type;
+
+      document.querySelectorAll('.option-card')
+        .forEach(c => c.classList.remove('selected'));
+
+      el.classList.add('selected');
+      document.getElementById('btn-pilih').disabled = false;
+    }
+
+    function handlePilih() {
+      if (!selected) return;
+
+      localStorage.setItem("moodbites", selected);
+      window.location.href = 'index.html';
+    }
+
+     // Inactivity timeout to ad page
+    let timeout;
+
+    function resetTimer() {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        window.location.href = "adv1.html";
+      }, 15000); // 15 seconds (nnti lebih lama)
+    }
+
+    // Detect user activity
+    ["click", "mousemove", "keydown", "touchstart"].forEach(event => {
+      document.addEventListener(event, resetTimer);
+    });
+
+    // Start timer on load
+    resetTimer();
+
+  </script>
+</body>
+
+</html>
