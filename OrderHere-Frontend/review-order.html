@@ -451,24 +451,28 @@
     }
 
     const btn = document.querySelector('.btn-lakukan');
+    const originalText = btn.innerHTML;
     btn.textContent = 'Memproses...';
     btn.disabled = true;
 
     try {
-      // ✅ SIAPKAN PAYLOAD LENGKAP
+      // 1. Cek isi variabel sebelum dikirim
+      console.log("DEBUG: Variabel diningType saat ini:", diningType);
+
       const payload = {
-        dining_type: diningType,                    // ✅ DARI LOCALSTORAGE
-        payment_method: selectedPayment.toUpperCase(), // ✅ DARI PILIHAN USER
+        dining_type: diningType, 
+        payment_method: selectedPayment.toUpperCase(),
+        notes_order: nama, // ✅ TAMBAHAN FIELD NOTES_ORDER
         foods: cart.map(item => ({
-          food_id: item.food_id,                    // ✅ ID DARI DATABASE
+          food_id: item.food_id, 
           quantity: item.qty,
           notes: item.catatan || null
         }))
       };
 
-      console.log('Sending payload:', payload);
+      // 2. Log Payload yang akan dikirim (cek apakah food_id ada nilainya)
+      console.log('DEBUG: Payload yang dikirim ke Server:', JSON.stringify(payload, null, 2));
 
-      // ✅ KIRIM POST KE API LARAVEL
       const response = await fetch(`${API_CONFIG.BASE_URL}/orders`, {
         method: 'POST',
         headers: {
@@ -481,27 +485,40 @@
       const result = await response.json();
 
       if (response.ok && result.success) {
-        // ✅ SIMPAN DATA ORDER DARI BACKEND
+        console.log('SUCCESS:', result);
         sessionStorage.setItem('order', JSON.stringify(result.data));
-        sessionStorage.setItem('antrian', result.data.queue_number || '10');
+        sessionStorage.setItem('antrian', result.data.queue_number);
         sessionStorage.setItem('paymentMethod', selectedPayment.toUpperCase());
-        
-        // ✅ CLEAR CART DARI LOCALSTORAGE
         clearCart();
-        
-        // ✅ REDIRECT KE PAYMENT.HTML
         window.location.href = 'payment.html';
       } else {
-        throw new Error(result.message || 'Gagal membuat pesanan');
+        // 3. LOG DETAIL ERROR DARI LARAVEL (PENTING!)
+        console.error('--- DETAIL VALIDASI GAGAL (422) ---');
+        if (result.errors) {
+          // Menampilkan tabel error agar mudah dibaca di console
+          console.table(result.errors);
+        } else {
+          console.log('Pesan Error:', result.message);
+        }
+        
+        // Munculkan pesan spesifik ke user
+        let errorMsg = result.message || 'Gagal membuat pesanan';
+        if (result.errors) {
+            // Mengambil pesan error pertama
+            const firstErrorField = Object.keys(result.errors)[0];
+            errorMsg = result.errors[firstErrorField][0];
+        }
+        throw new Error(errorMsg);
       }
 
     } catch (err) {
-      console.error('Submit order failed:', err);
+      console.error('CATCH ERROR:', err);
       alert('Terjadi kesalahan: ' + err.message);
-      btn.textContent = 'Lakukan Pembayaran →';
+      btn.innerHTML = originalText;
       btn.disabled = false;
     }
   }
-</script>
+  
+  </script>
 </body>
 </html>

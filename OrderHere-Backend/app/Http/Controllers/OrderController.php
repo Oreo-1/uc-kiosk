@@ -85,6 +85,7 @@ class OrderController extends Controller
         try {
             $validated = $request->validate([
                 'dining_type'  => ['required', Rule::in(['TAKEAWAY', 'DINEIN'])],
+                'notes_order'  => ['nullable', 'string'], // ✅ Tambahan notes_order
                 'foods'        => ['required', 'array', 'min:1'],
                 'foods.*.food_id'  => ['required', 'integer', 'exists:food,id'],
                 'foods.*.quantity' => ['required', 'integer', 'min:1'],
@@ -111,8 +112,6 @@ class OrderController extends Controller
                 ->count();
             $queueNumber = $todayOrderCount + 1;
 
-            // ✅ FIX: AGGREGATE ITEMS BY FOOD_ID (PENTING!)
-            // Mencegah error "Duplicate entry" karena primary key order_food adalah (order_id, food_id)
             $totalPrice = 0;
             $totalEstimated = 0;
             $groupedItems = [];
@@ -120,7 +119,6 @@ class OrderController extends Controller
             foreach ($validated['foods'] as $item) {
                 $foodId = $item['food_id'];
                 
-                // Jika food_id sudah ada di array, tambahkan quantity-nya
                 if (!isset($groupedItems[$foodId])) {
                     $groupedItems[$foodId] = [
                         'quantity' => 0,
@@ -130,7 +128,6 @@ class OrderController extends Controller
                 
                 $groupedItems[$foodId]['quantity'] += $item['quantity'];
                 
-                // Gabungkan notes jika ada
                 if (!empty($item['notes'])) {
                     $existingNotes = $groupedItems[$foodId]['notes'];
                     $groupedItems[$foodId]['notes'] = $existingNotes 
@@ -139,7 +136,6 @@ class OrderController extends Controller
                 }
             }
 
-            // Process grouped items menjadi array untuk insert
             $orderFoods = [];
             foreach ($groupedItems as $foodId => $itemData) {
                 $food = $foods->firstWhere('id', $foodId);
@@ -168,6 +164,7 @@ class OrderController extends Controller
                 $order = Order::create([
                     'vendor_id'      => $vendorId,
                     'dining_type'    => $validated['dining_type'],
+                    'notes_order'    => $validated['notes_order'] ?? null, // ✅ Simpan ke database
                     'status'         => 'ONPROGRESS',
                     'queue_number'   => $queueNumber,
                     'total_price'    => $totalPrice,
