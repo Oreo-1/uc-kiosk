@@ -333,6 +333,7 @@
     }
     .btn-tambah:hover { opacity: 0.9; }
     .btn-tambah:active { transform: scale(0.98); }
+
   </style>
   <link rel="stylesheet" href="main.css" />
   <script src="config.js"></script>
@@ -437,7 +438,12 @@
   let sheetQty = 1;
   let selectedSpice = null;
   let selectedAddons = [];
+  let recommendationRaw = null; 
   
+  // ✅ PLACEHOLDER ML
+  const MOOD_PLACEHOLDER = "sad";
+  const USER_ID_PLACEHOLDER = "12cc0214-e266-4d1a-8c1d-b287e6c5a1f1";
+
   // ✅ LOAD CART & DINING TYPE DARI LOCALSTORAGE
   let cart = getCart();
   const diningType = getDiningType();
@@ -445,11 +451,23 @@
   // ── FETCH FOODS & VENDORS ──────────────────────
   async function loadData() {
     try {
-      // 1. Ambil semua makanan + relasi vendor/addon
-      const res = await apiFetch('/foods?per_page=100');
+      // ✅ UBAH MENJADI per_page=500 AGAR SEMUA 212 DATA TERAMBIL
+      const res = await apiFetch('/foods?per_page=500');
       allFoods = res.data;
 
-      // 2. ✅ EKSTRAK VENDOR OTOMATIS DARI DATA MAKANAN
+      // 2. Tarik Data Rekomendasi dari API ML
+      try {
+        const mlUrl = `http://103.185.52.14:8067/recommend-external/${MOOD_PLACEHOLDER}/${USER_ID_PLACEHOLDER}`;
+        const recRes = await fetch(mlUrl);
+        const recJson = await recRes.json();
+        if (recJson && recJson.vendors) {
+          recommendationRaw = recJson.vendors;
+        }
+      } catch (err) {
+        console.error('Failed to fetch ML recommendations:', err);
+      }
+
+      // 3. EKSTRAK VENDOR OTOMATIS DARI DATA MAKANAN
       const vendorMap = new Map();
       allFoods.forEach(food => {
         if (food.vendor && !vendorMap.has(food.vendor.id)) {
@@ -458,7 +476,7 @@
       });
       allVendors = Array.from(vendorMap.values());
 
-      // 3. Render Vendor & Makanan
+      // 4. Render Vendor & Makanan
       renderVendors(allVendors);
       if (allVendors.length > 0) {
         currentVendorId = allVendors[0].id; // Set default vendor
@@ -505,18 +523,56 @@
     const vendor = allVendors.find(v => v.id === vendorId);
     if(vendor) document.getElementById('vendor-title').textContent = vendor.name;
 
-    renderFoods(allFoods.filter(f => f.vendor_id === vendorId));
+    // Default: tampilkan 'Semua' saat ganti vendor
+    setFilter(document.querySelector('.filter-tag'), 'all');
+  }
+
+  // ✅ HELPER PEMBERSIH NAMA SANGAT AGRESIF (Hapus spasi dan simbol)
+  function cleanString(str) {
+    if (!str) return "";
+    return str.toLowerCase().replace(/[^a-z0-9]/g, '');
   }
 
   function setFilter(el, category) {
     document.querySelectorAll('.filter-tag').forEach(t => t.classList.remove('active'));
     el.classList.add('active');
 
-    const filtered = allFoods.filter(f => {
-      const matchVendor = f.vendor_id === currentVendorId;
-      const matchCat = category === 'all' ? true : CATEGORY_MAP[f.type] === category;
-      return matchVendor && matchCat;
-    });
+    let filtered = [];
+
+    if (category === 'paket') {
+      // LOGIK REKOMENDASI ML
+      if (recommendationRaw) {
+        const vendorData = recommendationRaw.find(v => v.vendor_id == currentVendorId);
+        if (vendorData) {
+          let recNames = new Set();
+          
+          // Ambil dari condiment_categories
+          Object.keys(vendorData.condiment_categories).forEach(key => {
+            vendorData.condiment_categories[key].forEach(item => {
+              if (item["Nama Menu"]) recNames.add(cleanString(item["Nama Menu"]));
+            });
+          });
+
+          // Ambil dari standalone_menus
+          vendorData.standalone_menus.forEach(item => {
+            if (item["Nama Menu"]) recNames.add(cleanString(item["Nama Menu"]));
+          });
+
+          // Filter item database Laravel yang ada di list ML
+          filtered = allFoods.filter(f => {
+            return f.vendor_id == currentVendorId && recNames.has(cleanString(f.name));
+          });
+        }
+      }
+    } else {
+      // LOGIK FILTER BIASA
+      filtered = allFoods.filter(f => {
+        const matchVendor = f.vendor_id == currentVendorId;
+        const matchCat = category === 'all' ? true : CATEGORY_MAP[f.type] === category;
+        return matchVendor && matchCat;
+      });
+    }
+
     renderFoods(filtered);
   }
 
@@ -537,7 +593,6 @@
       const isSoldOut = !food.active;
       const emoji = getEmojiByType(food.type);
       
-      // ✅ GAMBAR DARI DATABASE
       const imgUrl = getImageUrl(food.image);
       const imgHTML = imgUrl 
         ? `<img src="${imgUrl}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` 
@@ -546,17 +601,13 @@
       const card = document.createElement('div');
       card.className = `menu-card ${isSoldOut ? 'sold-out' : ''}`;
       
-      // ✅ SIMPAN DATA LENGKAP DI DATASET
       card.dataset.id = food.id;
       card.dataset.name = food.name;
       card.dataset.price = food.price;
       card.dataset.est = food.estimated_time;
       card.dataset.category = category;
-      
-      // ✅ SPICE & ADDONS DARI DATABASE
       card.dataset.spice = JSON.stringify(food.spice || []); 
       
-      // Mapping addons dari relasi Laravel
       const dbAddons = (food.addons || []).map(a => ({
         label: a.addon ? a.addon.name : 'Tambahan',
         price: a.pivot ? a.pivot.extra_price : 0
@@ -790,24 +841,16 @@
 
   function handlePesan() {
     if (cart.length === 0) return;
-    
-    // ✅ SIMPAN CART KE LOCALSTORAGE (SUDAH OTOMATIS VIA saveCart)
     saveCart(cart);
-    
-    // Simpan maxEst untuk halaman berikutnya
     sessionStorage.setItem('maxEst', Math.max(...cart.map(i => i.est)));
-    
-    // Redirect ke review-order.html
     window.location.href = 'review-order.html';
   }
 
   // ── INIT ─────────────────────────────────────
   document.addEventListener('DOMContentLoaded', () => {
-    loadData(); // ✅ START FETCHING
-    
-    // ✅ TAMPILKAN DINING TYPE DARI LOCALSTORAGE
-    const badge = document.getElementById('order-type-badge');
-    if (badge) badge.textContent = diningType;
+    loadData(); 
+    const badgeDining = document.getElementById('order-type-badge');
+    if (badgeDining) badgeDining.textContent = diningType;
   });
 </script>
 </body>
