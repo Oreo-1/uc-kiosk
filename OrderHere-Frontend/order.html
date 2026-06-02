@@ -451,8 +451,8 @@
   // ── FETCH FOODS & VENDORS ──────────────────────
   async function loadData() {
     try {
-      // 1. Ambil semua makanan + relasi vendor/addon
-      const res = await apiFetch('/foods?per_page=100');
+      // ✅ UBAH MENJADI per_page=500 AGAR SEMUA 212 DATA TERAMBIL
+      const res = await apiFetch('/foods?per_page=500');
       allFoods = res.data;
 
       // 2. Tarik Data Rekomendasi dari API ML
@@ -527,7 +527,7 @@
     setFilter(document.querySelector('.filter-tag'), 'all');
   }
 
-  // HELPER PEMBERSIH NAMA AGRESSIVE (Hapus semua simbol dan spasi)
+  // ✅ HELPER PEMBERSIH NAMA SANGAT AGRESIF (Hapus spasi dan simbol)
   function cleanString(str) {
     if (!str) return "";
     return str.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -540,6 +540,7 @@
     let filtered = [];
 
     if (category === 'paket') {
+      // LOGIK REKOMENDASI ML
       if (recommendationRaw) {
         const vendorData = recommendationRaw.find(v => v.vendor_id == currentVendorId);
         if (vendorData) {
