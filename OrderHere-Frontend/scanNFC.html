@@ -1,172 +1,188 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
-  <title>Scan NFC</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+    <title>Scan NFC</title>
 
-  <style>
-    body {
-      margin: 0;
-      font-family: 'Montserrat', sans-serif;
-      background: #fff;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-    }
+    <style>
+      body {
+        margin: 0;
+        font-family: "Montserrat", sans-serif;
+        background: #fff;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+      }
 
-    .wrapper {
-      width: 400px;
-      text-align: center;
-      padding: 40px 20px;
-      position: relative;
-    }
+      .wrapper {
+        width: 400px;
+        text-align: center;
+        padding: 40px 20px;
+        position: relative;
+      }
 
-    .top-left {
-      position: absolute;
-      top: -20px;
-      left: -40px;
-      font-size: 22px;
-      font-weight: 700;
-      color: #994345;
-      font-style: italic;
-      letter-spacing: -1.2px;
-    }
+      .top-left {
+        position: absolute;
+        top: -20px;
+        left: -40px;
+        font-size: 22px;
+        font-weight: 700;
+        color: #994345;
+        font-style: italic;
+        letter-spacing: -1.2px;
+      }
 
-    h1 {
-      font-size: 28px;
-      margin-bottom: 10px;
-      color: #1a1a1a;
-    }
+      h1 {
+        font-size: 28px;
+        margin-bottom: 10px;
+        color: #1a1a1a;
+      }
 
-    p {
-      color: #6b7280;
-      margin-bottom: 30px;
-    }
+      p {
+        color: #6b7280;
+        margin-bottom: 30px;
+      }
 
-    .nfc-box {
-      width: 420px;
-      height: 420px;
-      margin: 0 auto 30px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+      .nfc-box {
+        width: 420px;
+        height: 420px;
+        margin: 0 auto 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
 
-    button {
-      background: #f97316;
-      color: white;
-      border: none;
-      padding: 14px 20px;
-      border-radius: 10px;
-      font-weight: bold;
-      cursor: pointer;
-      width: 100%;
-    }
+      button {
+        background: #f97316;
+        color: white;
+        border: none;
+        padding: 14px 20px;
+        border-radius: 10px;
+        font-weight: bold;
+        cursor: pointer;
+        width: 100%;
+      }
 
-    button:disabled {
-      background: #e5e7eb;
-      color: #9ca3af;
-      cursor: not-allowed;
-    }
+      button:disabled {
+        background: #e5e7eb;
+        color: #9ca3af;
+        cursor: not-allowed;
+      }
 
-    .status {
-      margin-top: 20px;
-      font-size: 14px;
-      color: #374151;
-    }
-  </style>
-</head>
+      .status {
+        margin-top: 20px;
+        font-size: 14px;
+        color: #374151;
+      }
+    </style>
+  </head>
 
-<body>
+  <body>
+    <div class="wrapper">
+      <div class="top-left">Moodbites</div>
 
-  <div class="wrapper">
-    <div class="top-left">Moodbites</div>
+      <h1>Scan NFC</h1>
+      <p>Tempelkan kartu / device NFC untuk lanjut ke MoodBites</p>
 
-    <h1>Scan NFC</h1>
-    <p>Tempelkan kartu / device NFC untuk lanjut ke MoodBites</p>
+      <div class="nfc-box">
+        <lottie-player
+          src="assets/nfc.json"
+          background="transparent"
+          speed="1"
+          style="width: 100%; height: 100%"
+          loop
+          autoplay
+        >
+        </lottie-player>
+      </div>
 
-    <div class="nfc-box">
-      <lottie-player
-        src="assets/nfc.json"
-        background="transparent"
-        speed="1"
-        style="width: 100%; height: 100%;"
-        loop
-        autoplay>
-      </lottie-player>
+      <button id="scanBtn">Mulai Scan NFC</button>
+
+      <div class="status" id="status">Status: menunggu scan...</div>
     </div>
 
-    <button id="scanBtn">Mulai Scan NFC</button>
+    <script>
+      const btn = document.getElementById("scanBtn");
+      const status = document.getElementById("status");
 
-    <div class="status" id="status">Status: menunggu scan...</div>
-  </div>
+      let scanning = false;
+      let ndef;
 
-  <script>
-    const btn = document.getElementById("scanBtn");
-    const status = document.getElementById("status");
+      btn.addEventListener("click", async () => {
+        if (!("NDEFReader" in window)) {
+          status.textContent = "❌ NFC tidak didukung di device ini";
+          return;
+        }
 
-    let scanning = false;
+        if (scanning) return;
 
-    btn.addEventListener("click", async () => {
+        try {
+          scanning = true;
+          btn.disabled = true;
 
-      // check support NFC
-      if (!("NDEFReader" in window)) {
-        status.textContent = "NFC tidak didukung di device ini";
-        return;
-      }
+          ndef = new NDEFReader();
+          await ndef.scan();
 
-      // prevent double scan
-      if (scanning) return;
-      scanning = true;
-      btn.disabled = true;
+          status.textContent = "📡 Mendengarkan NFC... tempelkan kartu";
 
-      try {
-        const ndef = new NDEFReader();
-        await ndef.scan();
+          ndef.onreading = (event) => {
+            console.log("RAW NFC EVENT:", event);
 
-        status.textContent = "Mendengarkan NFC... tempelkan tag";
+            let user_id = null;
 
-        ndef.onreading = (event) => {
+            for (const record of event.message.records) {
+              const decoder = new TextDecoder();
 
-          const decoder = new TextDecoder();
-          let user_id = "";
+              console.log("Record type:", record.recordType);
+              console.log("Raw data:", record.data);
 
-          for (const record of event.message.records) {
-            if (record.recordType === "text") {
-              user_id = decoder.decode(record.data);
+              // 🔥 lebih fleksibel (tidak hanya text)
+              try {
+                const decoded = decoder.decode(record.data);
+                console.log("Decoded:", decoded);
+
+                if (decoded) {
+                  user_id = decoded;
+                  break;
+                }
+              } catch (e) {
+                console.log("Decode error:", e);
+              }
             }
-          }
 
-          if (!user_id) {
-            status.textContent = "Data NFC kosong / tidak valid";
-            scanning = false;
-            btn.disabled = false;
-            return;
-          }
+            if (!user_id) {
+              status.textContent = "⚠ NFC terbaca tapi data kosong";
+              scanning = false;
+              btn.disabled = false;
+              return;
+            }
 
-          // SAVE USER ID
-          localStorage.setItem("user_id", user_id);
+            console.log("USER ID OK:", user_id);
 
-          status.textContent = "Berhasil! Mengalihkan...";
+            localStorage.setItem("user_id", user_id);
 
-          // small delay biar UX smooth
-          setTimeout(() => {
-            window.location.href = "camera.html";
-          }, 800);
-        };
+            status.textContent = "✅ NFC berhasil! masuk kamera...";
 
-      } catch (err) {
-        console.log(err);
-        status.textContent = "Gagal scan NFC: " + err;
+            // stop scan biar tidak double trigger
+            if (ndef && ndef.onreading) {
+              ndef.onreading = null;
+            }
 
-        scanning = false;
-        btn.disabled = false;
-      }
-    });
-  </script>
+            setTimeout(() => {
+              window.location.href = "camera.html";
+            }, 800);
+          };
+        } catch (err) {
+          console.error(err);
+          status.textContent = "❌ Gagal scan NFC: " + err.message;
 
-</body>
+          scanning = false;
+          btn.disabled = false;
+        }
+      });
+    </script>
+  </body>
 </html>
