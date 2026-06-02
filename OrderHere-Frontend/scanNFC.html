@@ -18,22 +18,21 @@
     }
 
     .wrapper {
-    width: 400px;
-    text-align: center;
-    padding: 40px 20px;    
-    position: relative;
+      width: 400px;
+      text-align: center;
+      padding: 40px 20px;
+      position: relative;
     }
 
     .top-left {
-    position: absolute;
-    top: -20px;
-    left: -40px;
-    font-size: 22px;
-    font-weight: 700;
-    color: #994345;
-    font-style: italic;
-    letter-spacing: -1.2px;
-    font-family: 'Plus Jakarta Sans', sans-serif;
+      position: absolute;
+      top: -20px;
+      left: -40px;
+      font-size: 22px;
+      font-weight: 700;
+      color: #994345;
+      font-style: italic;
+      letter-spacing: -1.2px;
     }
 
     h1 {
@@ -48,22 +47,12 @@
     }
 
     .nfc-box {
-    width: 420px;
-    height: 420px;
-    margin: 0 auto 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    }
-
-    .nfc-box img {
-      width: 100px;
-    }
-
-    @keyframes pulse {
-      0% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.05); opacity: 0.7; }
-      100% { transform: scale(1); opacity: 1; }
+      width: 420px;
+      height: 420px;
+      margin: 0 auto 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     button {
@@ -80,6 +69,7 @@
     button:disabled {
       background: #e5e7eb;
       color: #9ca3af;
+      cursor: not-allowed;
     }
 
     .status {
@@ -94,18 +84,19 @@
 
   <div class="wrapper">
     <div class="top-left">Moodbites</div>
+
     <h1>Scan NFC</h1>
-    <p>Tempelkan smartphone Anda ke area NFC untuk menghubungkan MoodBites</p>
+    <p>Tempelkan kartu / device NFC untuk lanjut ke MoodBites</p>
 
     <div class="nfc-box">
-    <lottie-player
+      <lottie-player
         src="assets/nfc.json"
         background="transparent"
         speed="1"
         style="width: 100%; height: 100%;"
         loop
         autoplay>
-    </lottie-player>
+      </lottie-player>
     </div>
 
     <button id="scanBtn">Mulai Scan NFC</button>
@@ -117,11 +108,20 @@
     const btn = document.getElementById("scanBtn");
     const status = document.getElementById("status");
 
+    let scanning = false;
+
     btn.addEventListener("click", async () => {
+
+      // check support NFC
       if (!("NDEFReader" in window)) {
         status.textContent = "NFC tidak didukung di device ini";
         return;
       }
+
+      // prevent double scan
+      if (scanning) return;
+      scanning = true;
+      btn.disabled = true;
 
       try {
         const ndef = new NDEFReader();
@@ -129,20 +129,41 @@
 
         status.textContent = "Mendengarkan NFC... tempelkan tag";
 
-        ndef.onreading = event => {
-          const decoder = new TextDecoder();
-          for (const record of event.message.records) {
-            const data = decoder.decode(record.data);
-            status.textContent = "Data NFC: " + data;
+        ndef.onreading = (event) => {
 
-            // contoh redirect
-            localStorage.setItem("nfcData", data);
-            window.location.href = "order.html";
+          const decoder = new TextDecoder();
+          let user_id = "";
+
+          for (const record of event.message.records) {
+            if (record.recordType === "text") {
+              user_id = decoder.decode(record.data);
+            }
           }
+
+          if (!user_id) {
+            status.textContent = "Data NFC kosong / tidak valid";
+            scanning = false;
+            btn.disabled = false;
+            return;
+          }
+
+          // SAVE USER ID
+          localStorage.setItem("user_id", user_id);
+
+          status.textContent = "Berhasil! Mengalihkan...";
+
+          // small delay biar UX smooth
+          setTimeout(() => {
+            window.location.href = "camera.html";
+          }, 800);
         };
 
       } catch (err) {
+        console.log(err);
         status.textContent = "Gagal scan NFC: " + err;
+
+        scanning = false;
+        btn.disabled = false;
       }
     });
   </script>
