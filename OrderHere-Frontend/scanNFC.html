@@ -66,16 +66,18 @@
         width: 100%;
       }
 
-      button:disabled {
-        background: #e5e7eb;
-        color: #9ca3af;
-        cursor: not-allowed;
-      }
-
       .status {
         margin-top: 20px;
         font-size: 14px;
         color: #374151;
+      }
+
+      /* Style tambahan untuk ID User di bawah */
+      .debug-id {
+        margin-top: 40px;
+        font-size: 11px;
+        color: #9ca3af;
+        font-family: monospace;
       }
 
       .overlay {
@@ -117,7 +119,7 @@
       <div class="top-left">Moodbites</div>
 
       <h1>Scan NFC</h1>
-      <p>Tempelkan kartu / device NFC untuk lanjut ke MoodBites</p>
+      <p>Tempelkan kartu pada alat scan untuk lanjut</p>
 
       <div class="nfc-box">
         <lottie-player
@@ -132,7 +134,10 @@
       </div>
 
       <button id="scanBtn">Batalkan Scan</button>
-      <div class="status" id="status">Status: menunggu scan...</div>
+      <div class="status" id="status">Status: Menghubungkan ke scanner...</div>
+      
+      <!-- Container untuk User ID (Hapus Nanti) -->
+      <div id="debugIdDisplay" class="debug-id"></div>
     </div>
 
     <div id="successOverlay" class="overlay">
@@ -145,84 +150,84 @@
 
     <script>
       const btn = document.getElementById("scanBtn");
-      const status = document.getElementById("status");
+      const statusText = document.getElementById("status");
+      const debugText = document.getElementById("debugIdDisplay");
+      const API_URL = "http://10.1.50.36:6767/wait-user";
+      
+      let isScanning = true;
+      let controller = new AbortController();
 
-      let scanning = false;
-      let ndef;
+      async function startLongPolling() {
+        if (!isScanning) return;
 
-      async function startNFCScan() {
-        if (!("NDEFReader" in window)) {
-          status.textContent = "❌ NFC tidak didukung di device ini";
-          btn.style.display = "none";
-          return;
-        }
+        statusText.textContent = "Status: Menunggu kartu ditempel...";
 
         try {
-          scanning = true;
+          const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-          ndef = new NDEFReader();
-          await ndef.scan();
+          const response = await fetch(API_URL, {
+            method: 'GET',
+            signal: controller.signal
+          });
 
-          status.textContent = "📡 Tempelkan kartu NFC...";
-          btn.textContent = "Batalkan Scan";
+          clearTimeout(timeoutId);
 
-          ndef.onreading = (event) => {
-            let user_id = null;
-
-            for (const record of event.message.records) {
-              try {
-                const decoder = new TextDecoder();
-                const decoded = decoder.decode(record.data);
-
-                if (decoded) {
-                  user_id = decoded.trim();
-                  break;
-                }
-              } catch (e) {
-                console.log(e);
-              }
+          if (response.ok) {
+            const data = await response.json();
+            
+            // PERBAIKAN DI SINI: Mencocokkan dengan JSON {"success":true, "userId": "..."}
+            if (data && data.success === true && data.userId) {
+              handleSuccess(data.userId);
+            } else {
+              // Jika sukses tapi data tidak valid atau success: false, ulangi polling
+              console.log("Data tidak valid atau success: false", data);
+              startLongPolling();
             }
+          } else {
+            setTimeout(startLongPolling, 1000);
+          }
 
-            if (!user_id) {
-              status.textContent = "⚠ NFC terbaca tapi data kosong";
-              return;
-            }
-
-            localStorage.setItem("user_id", user_id);
-
-            navigator.vibrate?.(200);
-
-            document.getElementById("successOverlay").style.display = "flex";
-
-            document.querySelector("#successOverlay h2").textContent =
-              "NFC Berhasil Terscan";
-
-            document.querySelector("#successOverlay p").textContent =
-              "Mengalihkan ke kamera...";
-
-            setTimeout(() => {
-              window.location.href = "camera.html";
-            }, 2000);
-          };
-        } catch (err) {
-          console.error(err);
-          status.textContent = "❌ Gagal scan NFC";
+        } catch (error) {
+          if (error.name === 'AbortError') {
+            console.log("Timeout, mengulang...");
+            controller = new AbortController();
+            startLongPolling();
+          } else {
+            console.error("Koneksi gagal:", error);
+            statusText.textContent = "⚠️ Gagal terhubung ke server (10.1.50.36)...";
+            setTimeout(startLongPolling, 3000); 
+          }
         }
       }
 
-      // otomatis scan saat halaman dibuka
-      window.addEventListener("load", () => {
-        startNFCScan();
+      function handleSuccess(userId) {
+        isScanning = false;
+        
+        // Simpan User ID ke Local Storage
+        localStorage.setItem("user_id", userId);
+        
+        // Tampilkan User ID di bagian bawah (Hapus Nanti)
+        // debugText.textContent = `User ID: ${userId} (hapus nanti)`;
+
+        // Efek getar
+        navigator.vibrate?.(200);
+
+        // Tampilkan overlay sukses
+        document.getElementById("successOverlay").style.display = "flex";
+        
+        setTimeout(() => {
+          window.location.href = "camera.html";
+        }, 2000);
+      }
+
+      btn.addEventListener("click", () => {
+        isScanning = false;
+        controller.abort();
+        window.history.back();
       });
 
-      // tombol menjadi batal
-      btn.addEventListener("click", () => {
-        if (!scanning) return;
-
-        window.history.back();
-
-        // atau:
-        // window.location.href = "index.html";
+      window.addEventListener("load", () => {
+        startLongPolling();
       });
     </script>
   </body>
