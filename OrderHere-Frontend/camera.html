@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Capture Mood - Locked to FHD Camera</title>
+    <title>Capture Mood - Generic Camera</title>
     <style>
         body { 
             margin: 0; 
@@ -30,7 +30,7 @@
             z-index: 9999;
             text-align: center;
             padding: 20px;
-            display: none; /* Sembunyi secara default */
+            display: none; 
         }
 
         .modal-content {
@@ -81,9 +81,9 @@
         <div class="modal-content">
             <h2 style="color: #f97316;">Izin Kamera Diperlukan</h2>
             <p>Aplikasi ini membutuhkan akses kamera untuk mendeteksi wajah.</p>
-            <p style="font-size: 13px; color: #aaa;">Jika pop-up izin tidak muncul, klik ikon kunci di bar alamat browser dan aktifkan kamera.</p>
+            <p style="font-size: 13px; color: #aaa;">Klik tombol di bawah dan pilih "Allow/Izinkan" pada pop-up browser.</p>
             <br>
-            <button class="btn-orange" onclick="retryPermission()">BERIKAN IZIN SEKARANG</button>
+            <button class="btn-orange" onclick="retryPermission()">AKTIFKAN KAMERA</button>
         </div>
     </div>
 
@@ -91,7 +91,7 @@
         <video id="video" autoplay playsinline></video>
     </div>
 
-    <div id="status" class="status-text">Menunggu Izin Kamera...</div>
+    <div id="status" class="status-text">Memulai Kamera...</div>
     
     <button id="captureBtn" class="btn-orange" onclick="capture()">Ambil Foto & Deteksi</button>
 
@@ -103,76 +103,43 @@
         const captureBtn = document.getElementById("captureBtn");
         const vidContainer = document.getElementById("vidContainer");
         const permissionModal = document.getElementById("permissionModal");
-        
-        const TARGET_CAMERA_NAME = "FHD Camera (1bcf:28c4)";
 
-        // Fungsi yang dipanggil saat user klik tombol di modal
         function retryPermission() {
             location.reload(); 
         }
 
-        async function initSpecificCamera() {
+        async function initAnyCamera() {
             try {
                 statusEl.textContent = "Meminta akses kamera...";
                 
-                // LANGKAH 1: Paksa minta izin (Trigger pop-up browser)
-                const streamInit = await navigator.mediaDevices.getUserMedia({ 
-                    video: { width: 1280, height: 720 } 
+                // Minta izin kamera (browser akan otomatis pilih kamera default)
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    } 
                 });
                 
-                // Matikan stream sementara untuk scan device
-                streamInit.getTracks().forEach(t => t.stop());
-
-                // LANGKAH 2: Cari kamera spesifik
-                const devices = await navigator.mediaDevices.enumerateDevices();
-                const videoDevices = devices.filter(d => d.kind === 'videoinput');
-
-                // Kita cari yang labelnya mengandung "FHD Camera"
-                const myExternalCam = videoDevices.find(d => d.label.includes("FHD Camera"));
-
-                if (myExternalCam) {
-                    permissionModal.style.display = "none";
-                    startStream(myExternalCam.deviceId);
-                } else {
-                    statusEl.textContent = "KAMERA EXTERNAL TIDAK DITEMUKAN";
-                    statusEl.style.color = "#ef4444";
-                    alert(`Peringatan: Kamera "${TARGET_CAMERA_NAME}" belum tercolok.`);
-                }
+                // Jika berhasil, sembunyikan modal dan jalankan stream
+                permissionModal.style.display = "none";
+                video.srcObject = stream;
+                
+                statusEl.textContent = "KAMERA AKTIF";
+                statusEl.style.color = "#22c55e";
+                vidContainer.classList.add("connected");
+                captureBtn.style.display = "block";
 
             } catch (err) {
                 console.error("Permission Error:", err);
-                // JIKA IZIN DITOLAK (User klik Block)
+                // JIKA IZIN DITOLAK atau kamera tidak ada
                 showPermissionModal();
             }
         }
 
         function showPermissionModal() {
             permissionModal.style.display = "flex";
-            statusEl.textContent = "AKSES DITOLAK";
+            statusEl.textContent = "AKSES DITOLAK / TIDAK ADA KAMERA";
             statusEl.style.color = "#ef4444";
-        }
-
-        function startStream(deviceId) {
-            const constraints = {
-                video: { 
-                    deviceId: { exact: deviceId },
-                    width: { ideal: 1920 },
-                    height: { ideal: 1080 }
-                }
-            };
-
-            navigator.mediaDevices.getUserMedia(constraints)
-                .then(stream => {
-                    video.srcObject = stream;
-                    statusEl.textContent = "KAMERA EKSTERNAL AKTIF";
-                    statusEl.style.color = "#22c55e";
-                    vidContainer.classList.add("connected");
-                    captureBtn.style.display = "block";
-                })
-                .catch(err => {
-                    statusEl.textContent = "Gagal Memuat Stream";
-                    showPermissionModal();
-                });
         }
 
         function capture() {
@@ -181,16 +148,18 @@
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             ctx.drawImage(video, 0, 0);
+            
             const base64 = canvas.toDataURL("image/png");
             alert("Foto Berhasil Diambil!");
+            // Lanjut ke logic pengiriman base64 Anda
         }
 
-        // Jalankan sistem
-        window.onload = initSpecificCamera;
+        // Jalankan sistem saat halaman dimuat
+        window.onload = initAnyCamera;
 
-        // Auto reload jika ada perubahan hardware (USB dicabut/pasang)
+        // Deteksi jika perangkat dicabut/pasang
         navigator.mediaDevices.ondevicechange = () => {
-            location.reload();
+            console.log("Hardware change detected");
         };
     </script>
 </body>
