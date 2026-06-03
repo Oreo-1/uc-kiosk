@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Capture Mood - Mobile & Tablet</title>
+    <title>Capture Mood - Direct Access</title>
     <style>
         body { 
             margin: 0; 
@@ -18,34 +18,10 @@
             overflow: hidden; 
         }
 
-        /* MODAL PAKSA IZIN */
-        #permissionModal {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.95);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            text-align: center;
-            padding: 30px;
-            display: none; 
-        }
-
-        .modal-content {
-            background: #1a1a1a;
-            padding: 25px;
-            border-radius: 15px;
-            border: 2px solid #f97316;
-            width: 100%;
-            max-width: 320px;
-        }
-
         .video-container { 
             width: 90%; 
             max-width: 500px; 
-            aspect-ratio: 4 / 5; /* HP biasanya lebih tinggi */
+            aspect-ratio: 4 / 5; 
             border-radius: 15px; 
             overflow: hidden; 
             border: 3px solid #333;
@@ -60,8 +36,8 @@
         video { 
             width: 100%; 
             height: 100%; 
-            object-fit: cover; /* Agar video memenuhi container di HP */
-            transform: scaleX(-1); /* Efek cermin untuk kamera depan */
+            object-fit: cover; 
+            transform: scaleX(-1); 
         }
 
         .status-text { 
@@ -89,8 +65,8 @@
         .btn-switch {
             margin-top: 10px;
             background: transparent;
-            border: 1px solid #555;
-            color: #ccc;
+            border: 1px solid #444;
+            color: #888;
             padding: 8px 16px;
             border-radius: 20px;
             font-size: 12px;
@@ -104,26 +80,14 @@
 </head>
 <body>
 
-    <!-- MODAL UNTUK MEMAKSA IZIN -->
-    <div id="permissionModal">
-        <div class="modal-content">
-            <h2 style="color: #f97316; margin-top: 0;">Akses Kamera</h2>
-            <p style="font-size: 14px; line-height: 1.5;">Aplikasi membutuhkan izin kamera untuk mendeteksi mood wajah Anda.</p>
-            <p style="font-size: 12px; color: #888;">Klik "Izinkan" atau "Allow" saat diminta oleh browser.</p>
-            <br>
-            <button class="btn-orange" onclick="retryPermission()">AKTIFKAN SEKARANG</button>
-        </div>
-    </div>
-
     <div class="video-container" id="vidContainer">
         <video id="video" autoplay playsinline muted></video>
     </div>
 
-    <div id="status" class="status-text">Menyiapkan Kamera...</div>
+    <div id="status" class="status-text">Meminta Akses Kamera...</div>
     
-    <button id="captureBtn" class="btn-orange" onclick="capture()">AMBIL FOTO</button>
+    <button id="captureBtn" class="btn-orange" onclick="capture()">AMBIL FOTO & DETEKSI</button>
     
-    <!-- Tombol ganti kamera jika di HP ada depan/belakang -->
     <button class="btn-switch" onclick="switchCamera()">Ganti Kamera</button>
 
     <canvas id="canvas"></canvas>
@@ -133,23 +97,16 @@
         const statusEl = document.getElementById("status");
         const captureBtn = document.getElementById("captureBtn");
         const vidContainer = document.getElementById("vidContainer");
-        const permissionModal = document.getElementById("permissionModal");
+        const user_id = localStorage.getItem("user_id") || "guest";
 
-        let currentFacingMode = "user"; // "user" = kamera depan, "environment" = kamera belakang
-
-        function retryPermission() {
-            location.reload(); 
-        }
+        let currentFacingMode = "user"; 
 
         async function initCamera() {
-            // Hentikan stream yang sudah ada jika ingin ganti kamera
             if (video.srcObject) {
                 video.srcObject.getTracks().forEach(track => track.stop());
             }
 
             try {
-                statusEl.textContent = "Membuka kamera...";
-                
                 const constraints = { 
                     video: { 
                         facingMode: currentFacingMode,
@@ -160,21 +117,19 @@
                 };
 
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
-                
-                permissionModal.style.display = "none";
                 video.srcObject = stream;
                 
-                // Mirroring hanya untuk kamera depan
                 video.style.transform = currentFacingMode === "user" ? "scaleX(-1)" : "scaleX(1)";
                 
-                statusEl.textContent = "KAMERA SIAP";
+                statusEl.textContent = "KAMERA AKTIF";
                 statusEl.style.color = "#22c55e";
                 vidContainer.classList.add("connected");
                 captureBtn.style.display = "block";
 
             } catch (err) {
                 console.error("Camera Error:", err);
-                showPermissionModal();
+                statusEl.textContent = "AKSES DITOLAK: Aktifkan izin kamera di pengaturan browser.";
+                statusEl.style.color = "#ef4444";
             }
         }
 
@@ -183,36 +138,65 @@
             initCamera();
         }
 
-        function showPermissionModal() {
-            permissionModal.style.display = "flex";
-            statusEl.textContent = "IZIN KAMERA DITOLAK";
-            statusEl.style.color = "#ef4444";
-        }
-
         function capture() {
             const canvas = document.getElementById("canvas");
             const ctx = canvas.getContext("2d");
             
-            // Samakan ukuran canvas dengan video asli
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             
-            // Balik gambar jika menggunakan kamera depan agar hasil foto tidak terbalik (seperti cermin)
             if (currentFacingMode === "user") {
                 ctx.translate(canvas.width, 0);
                 ctx.scale(-1, 1);
             }
             
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageBase64 = canvas.toDataURL("image/png");
             
-            const base64 = canvas.toDataURL("image/png");
-            
-            // Animasi flash sederhana
+            statusEl.textContent = "Mendeteksi Mood...";
+            statusEl.style.color = "#f97316";
+
+            // Efek visual flash
             vidContainer.style.opacity = "0.5";
             setTimeout(() => vidContainer.style.opacity = "1", 100);
 
-            alert("Foto Berhasil Diambil!");
-            console.log("Image data:", base64);
+            sendToAndreML(imageBase64);
+        }
+
+        async function sendToAndreML(image) {
+            try {
+                // GANTI URL INI DENGAN URL API ML ANDA
+                const res = await fetch("https://api.anda.com/detect-mood", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ image: image }),
+                });
+
+                const data = await res.json();
+                const mood = data.mood || "neutral";
+
+                statusEl.textContent = "Mood: " + mood;
+                sendToBackend(user_id, mood);
+            } catch (err) {
+                console.error(err);
+                statusEl.textContent = "Gagal kirim ke AI.";
+            }
+        }
+
+        async function sendToBackend(user_id, mood) {
+            try {
+                // GANTI URL INI DENGAN URL BACKEND ANDA
+                await fetch("https://api.anda.com/v1/user-mood", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ user_id, mood }),
+                });
+
+                statusEl.textContent = "Sukses! Mengarahkan...";
+                setTimeout(() => window.location.href = "index.html", 1200);
+            } catch (err) {
+                console.error(err);
+            }
         }
 
         window.onload = initCamera;
