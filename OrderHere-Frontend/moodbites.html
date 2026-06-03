@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1"
+    />
+    <title>Order Here</title>
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Montserrat", sans-serif;
+        background: #ffffff;
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      /* WRAPPER */
+      .kiosk-wrapper {
+        width: 500px;
+        min-height: 100vh;
+        background: #ffffff;
+        display: flex;
+        flex-direction: column;
+        padding: 48px 24px 32px;
+      }
+
+      /* HEADER */
+      .header {
+        text-align: center;
+        margin-top: 20px;
+        margin-bottom: 20px;
+      }
+
+      .header .label {
+        font-size: 20px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        color: #f97316;
+        text-transform: uppercase;
+        margin-bottom: -5px;
+      }
+
+      .header h1 {
+        font-size: 42px;
+        font-weight: 800;
+        color: #f97316;
+      }
+
+      .subtext {
+        font-size: 18px;
+        color: #4b5563;
+        text-align: center;
+        margin-top: 10px;
+        line-height: 1.4;
+      }
+
+      /* OPTIONS */
+      .options {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        flex: 1;
+        align-content: center;
+        margin-top: 30px;
+      }
+
+      /* CARD */
+      .option-card {
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 36px 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 14px;
+        cursor: pointer;
+        transition: 0.2s ease;
+        background: #ffffff;
+        user-select: none;
+      }
+
+      .option-card:hover {
+        border-color: #f97316;
+        box-shadow: 0 6px 18px rgba(249, 115, 22, 0.15);
+        transform: translateY(-2px);
+      }
+
+      .option-card.selected {
+        border-color: #f97316;
+        box-shadow: 0 6px 22px rgba(249, 115, 22, 0.25);
+      }
+
+      .option-card:active {
+        transform: scale(0.97);
+      }
+
+      /* ICON */
+      .card-icon {
+        width: 85px;
+        height: 85px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .card-icon img {
+        width: 85px;
+        object-fit: contain;
+      }
+
+      /* LABEL */
+      .card-label {
+        font-size: 18px;
+        font-weight: 600;
+        color: #f97316;
+        text-align: center;
+      }
+
+      /* CTA */
+      .cta {
+        margin-top: 30px;
+      }
+
+      .btn-pilih {
+        width: 83%;
+        padding: 16px;
+        border: none;
+        border-radius: 12px;
+        background: #f97316;
+        color: #ffffff;
+        font-size: 16px;
+        font-weight: 800;
+        cursor: pointer;
+        transition: 0.2s;
+
+        display: block;
+        margin: 0 auto;
+      }
+
+      .btn-pilih:disabled {
+        background: #e5e7eb;
+        color: #9ca3af;
+        cursor: not-allowed;
+      }
+
+      /* =========================
+         RESPONSIVE
+      ========================= */
+
+      @media (max-width: 768px) {
+        .kiosk-wrapper {
+          width: 100%;
+          padding: 32px 20px;
+        }
+
+        .header h1 {
+          font-size: 34px;
+        }
+
+        .subtext {
+          font-size: 16px;
+        }
+
+        .options {
+          gap: 20px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        body {
+          align-items: flex-start;
+        }
+
+        .kiosk-wrapper {
+          width: 100%;
+          padding: 24px 16px;
+        }
+
+        .header h1 {
+          font-size: 28px;
+        }
+
+        .header .label {
+          font-size: 16px;
+        }
+
+        .subtext {
+          font-size: 14px;
+        }
+
+        .options {
+          grid-template-columns: 1fr;
+          gap: 16px;
+        }
+
+        .card-icon img {
+          width: 70px;
+        }
+
+        .card-label {
+          font-size: 15px;
+        }
+
+        .btn-pilih {
+          font-size: 15px;
+        }
+      }
+
+      @media (max-width: 360px) {
+        .header h1 {
+          font-size: 24px;
+        }
+
+        .subtext {
+          font-size: 13px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="kiosk-wrapper">
+      <!-- HEADER -->
+      <div class="header">
+        <p class="label">Selamat Datang di</p>
+        <h1>Order Here</h1>
+      </div>
+
+      <!-- SUBTEXT -->
+      <p class="subtext">Ingin pesan makanan sesuai mood Anda hari ini?</p>
+
+      <!-- OPTIONS -->
+      <div class="options">
+        <div class="option-card" onclick="selectOption(this, 'MOODBITES')">
+          <div class="card-icon">
+            <img src="assets/moodbites/yes.png" />
+          </div>
+          <span class="card-label">Ya, Gunakan MoodBites</span>
+        </div>
+
+        <div class="option-card" onclick="selectOption(this, 'NO_MOODBITES')">
+          <div class="card-icon">
+            <img src="assets/moodbites/no.png" />
+          </div>
+          <span class="card-label">Lewati, Tanpa MoodBites</span>
+        </div>
+      </div>
+
+      <!-- CTA -->
+      <div class="cta">
+        <button
+          class="btn-pilih"
+          id="btn-pilih"
+          disabled
+          onclick="handlePilih()"
+        >
+          Lanjutkan
+        </button>
+      </div>
+    </div>
+
+    <script>
+      let selected = null;
+
+      function selectOption(el, type) {
+        selected = type;
+
+        document
+          .querySelectorAll(".option-card")
+          .forEach((c) => c.classList.remove("selected"));
+
+        el.classList.add("selected");
+        document.getElementById("btn-pilih").disabled = false;
+      }
+
+      function handlePilih() {
+        if (!selected) return;
+
+        localStorage.setItem("moodbites", selected);
+
+        if (selected === "MOODBITES") {
+          window.location.href = "scanNFC.html";
+        } else {
+          window.location.href = "index.html";
+        }
+      }
+
+      // AUTO INACTIVITY REDIRECT
+      let timeout;
+
+      function resetTimer() {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+          window.location.href = "adv1.html";
+        }, 15000);
+      }
+
+      ["click", "mousemove", "keydown", "touchstart"].forEach((event) => {
+        document.addEventListener(event, resetTimer);
+      });
+
+      resetTimer();
+    </script>
+  </body>
+</html>

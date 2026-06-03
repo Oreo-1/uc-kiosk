@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Capture Mood</title>
+
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #000;
+        color: #fff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+      }
+
+      h2 {
+        margin-bottom: 10px;
+      }
+
+      video {
+        width: 700px;
+        height: 600px;
+        border-radius: 12px;
+        border: 2px solid #f97316;
+      }
+
+      canvas {
+        display: none;
+      }
+
+      button {
+        margin-top: 20px;
+        padding: 12px 20px;
+        background: #f97316;
+        border: none;
+        border-radius: 10px;
+        color: white;
+        font-weight: bold;
+        cursor: pointer;
+        font-size: 16px;
+      }
+
+      .status {
+        margin-top: 15px;
+        font-size: 18px;
+        color: #ccc;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h2>Tunjukkan wajah Anda ke kamera</h2>
+
+    <video id="video" autoplay></video>
+    <canvas id="canvas"></canvas>
+
+    <button onclick="capture()">Foto & Deteksi</button>
+
+    <div class="status" id="status">Menunggu kamera...</div>
+
+    <script>
+      const video = document.getElementById("video");
+      const canvas = document.getElementById("canvas");
+      const statusEl = document.getElementById("status");
+      const user_id = localStorage.getItem("user_id");
+
+      // =======================
+      // 1. START CAMERA
+      // =======================
+      async function startCamera() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+          });
+
+          video.srcObject = stream;
+          statusEl.textContent = "Kamera siap mengambil foto";
+        } catch (err) {
+          console.error(err);
+          statusEl.textContent = "Gagal akses kamera";
+        }
+      }
+
+      startCamera();
+
+      // =======================
+      // 2. CAPTURE IMAGE
+      // =======================
+      function capture() {
+        const ctx = canvas.getContext("2d");
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        ctx.drawImage(video, 0, 0);
+
+        const imageBase64 = canvas.toDataURL("image/png");
+
+        statusEl.textContent = "Mengirim ke AI...";
+
+       //sendTo??(imageBase64);
+      }
+
+      async function sendToAndreML(image) { // ganti nama function ini sesuai ML yang dipakai nanti
+        try {
+          const res = await fetch("??", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              image: image,
+            }),
+          });
+
+          const data = await res.json();
+
+          const mood = data.mood;
+
+          statusEl.textContent = "Mood terdeteksi: " + mood;
+
+          sendToBackend(user_id, mood);
+        } catch (err) {
+          console.error(err);
+          statusEl.textContent = "Gagal kirim ke ML";
+        }
+      }
+
+      // =======================
+      // 4. SEND TO YOUR BACKEND
+      // =======================
+      async function sendToBackend(user_id, mood) {
+        try {
+          const res = await fetch("", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              user_id,
+              mood,
+            }),
+          });
+
+          await res.json();
+
+          statusEl.textContent = "Sukses! Mengarahkan...";
+
+          setTimeout(() => {
+            window.location.href = "index.html";
+          }, 1200);
+        } catch (err) {
+          console.error(err);
+          statusEl.textContent = "Gagal kirim ke backend";
+        }
+      }
+    </script>
+  </body>
+</html>
