@@ -18,6 +18,29 @@
             overflow: hidden; 
         }
 
+        /* MODAL PAKSA IZIN */
+        #permissionModal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            text-align: center;
+            padding: 20px;
+            display: none; /* Sembunyi secara default */
+        }
+
+        .modal-content {
+            background: #222;
+            padding: 30px;
+            border-radius: 20px;
+            border: 2px solid #f97316;
+            max-width: 400px;
+        }
+
         .video-container { 
             width: 800px; 
             max-width: 90%; 
@@ -28,103 +51,105 @@
             transition: border-color 0.5s;
         }
 
-        .video-container.connected {
-            border-color: #f97316;
-        }
+        .video-container.connected { border-color: #f97316; }
 
-        video { 
-            width: 100%; 
-            background: #111; 
-            display: block;
-        }
+        video { width: 100%; background: #111; display: block; }
 
-        .status-text { 
-            font-size: 18px; 
-            font-weight: bold; 
-            color: #f97316; 
-            margin: 25px 0;
-            text-align: center;
-        }
+        .status-text { font-size: 18px; font-weight: bold; color: #f97316; margin: 25px 0; text-align: center; }
 
-        .error-msg {
-            color: #ef4444;
-            font-size: 14px;
-            margin-top: 10px;
-            display: none;
-        }
-
-        button { 
-            padding: 20px 50px; 
+        .btn-orange { 
+            padding: 15px 30px; 
             background: #f97316; 
             border: none; 
             border-radius: 50px; 
             color: white; 
-            font-size: 18px; 
+            font-size: 16px; 
             font-weight: bold; 
             cursor: pointer; 
-            transition: all 0.3s;
-            display: none; /* Muncul hanya jika kamera yang benar aktif */
             box-shadow: 0 4px 15px rgba(249, 115, 22, 0.4);
         }
 
-        button:hover { 
-            background: #fb923c; 
-            transform: translateY(-3px); 
-        }
+        #captureBtn { display: none; padding: 20px 50px; font-size: 18px; }
 
         canvas { display: none; }
     </style>
 </head>
 <body>
 
+    <!-- MODAL UNTUK MEMAKSA IZIN -->
+    <div id="permissionModal">
+        <div class="modal-content">
+            <h2 style="color: #f97316;">Izin Kamera Diperlukan</h2>
+            <p>Aplikasi ini membutuhkan akses kamera untuk mendeteksi wajah.</p>
+            <p style="font-size: 13px; color: #aaa;">Jika pop-up izin tidak muncul, klik ikon kunci di bar alamat browser dan aktifkan kamera.</p>
+            <br>
+            <button class="btn-orange" onclick="retryPermission()">BERIKAN IZIN SEKARANG</button>
+        </div>
+    </div>
+
     <div class="video-container" id="vidContainer">
         <video id="video" autoplay playsinline></video>
     </div>
 
-    <div id="status" class="status-text">Menghubungkan ke FHD Camera...</div>
-    <div id="error" class="error-msg"></div>
+    <div id="status" class="status-text">Menunggu Izin Kamera...</div>
     
-    <button id="captureBtn" onclick="capture()">Ambil Foto & Deteksi</button>
+    <button id="captureBtn" class="btn-orange" onclick="capture()">Ambil Foto & Deteksi</button>
 
     <canvas id="canvas"></canvas>
 
     <script>
         const video = document.getElementById("video");
         const statusEl = document.getElementById("status");
-        const errorEl = document.getElementById("error");
         const captureBtn = document.getElementById("captureBtn");
         const vidContainer = document.getElementById("vidContainer");
+        const permissionModal = document.getElementById("permissionModal");
         
-        // NAMA SPESIFIK KAMERA ANDA
         const TARGET_CAMERA_NAME = "FHD Camera (1bcf:28c4)";
+
+        // Fungsi yang dipanggil saat user klik tombol di modal
+        function retryPermission() {
+            location.reload(); 
+        }
 
         async function initSpecificCamera() {
             try {
-                // 1. Minta izin akses (Wajib agar label terbaca)
-                const streamInit = await navigator.mediaDevices.getUserMedia({ video: true });
+                statusEl.textContent = "Meminta akses kamera...";
+                
+                // LANGKAH 1: Paksa minta izin (Trigger pop-up browser)
+                const streamInit = await navigator.mediaDevices.getUserMedia({ 
+                    video: { width: 1280, height: 720 } 
+                });
+                
+                // Matikan stream sementara untuk scan device
                 streamInit.getTracks().forEach(t => t.stop());
 
-                // 2. Scan semua daftar kamera
+                // LANGKAH 2: Cari kamera spesifik
                 const devices = await navigator.mediaDevices.enumerateDevices();
                 const videoDevices = devices.filter(d => d.kind === 'videoinput');
 
-                // 3. Cari kamera yang mengandung nama TARGET
+                // Kita cari yang labelnya mengandung "FHD Camera"
                 const myExternalCam = videoDevices.find(d => d.label.includes("FHD Camera"));
 
                 if (myExternalCam) {
+                    permissionModal.style.display = "none";
                     startStream(myExternalCam.deviceId);
                 } else {
-                    statusEl.textContent = "SISTEM ERROR";
+                    statusEl.textContent = "KAMERA EXTERNAL TIDAK DITEMUKAN";
                     statusEl.style.color = "#ef4444";
-                    errorEl.textContent = `Kamera "${TARGET_CAMERA_NAME}" tidak terdeteksi. Periksa kabel USB.`;
-                    errorEl.style.display = "block";
+                    alert(`Peringatan: Kamera "${TARGET_CAMERA_NAME}" belum tercolok.`);
                 }
 
             } catch (err) {
-                statusEl.textContent = "Akses Kamera Ditolak";
-                errorEl.textContent = "Pastikan Anda memberikan izin akses kamera di browser.";
-                errorEl.style.display = "block";
+                console.error("Permission Error:", err);
+                // JIKA IZIN DITOLAK (User klik Block)
+                showPermissionModal();
             }
+        }
+
+        function showPermissionModal() {
+            permissionModal.style.display = "flex";
+            statusEl.textContent = "AKSES DITOLAK";
+            statusEl.style.color = "#ef4444";
         }
 
         function startStream(deviceId) {
@@ -140,13 +165,13 @@
                 .then(stream => {
                     video.srcObject = stream;
                     statusEl.textContent = "KAMERA EKSTERNAL AKTIF";
-                    statusEl.style.color = "#22c55e"; // Warna Hijau
+                    statusEl.style.color = "#22c55e";
                     vidContainer.classList.add("connected");
                     captureBtn.style.display = "block";
                 })
                 .catch(err => {
                     statusEl.textContent = "Gagal Memuat Stream";
-                    console.error(err);
+                    showPermissionModal();
                 });
         }
 
@@ -155,21 +180,15 @@
             const ctx = canvas.getContext("2d");
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
-            
-            // Gambar frame
             ctx.drawImage(video, 0, 0);
-            
             const base64 = canvas.toDataURL("image/png");
-            statusEl.textContent = "Foto Berhasil Diambil!";
-            
-            // Integrasikan dengan fungsi sendToAndreML(base64) Anda di sini
-            alert("Memproses Wajah...");
+            alert("Foto Berhasil Diambil!");
         }
 
-        // Jalankan otomatis saat halaman dimuat
+        // Jalankan sistem
         window.onload = initSpecificCamera;
 
-        // Jika kamera dicabut/pasang, sistem akan mengecek ulang
+        // Auto reload jika ada perubahan hardware (USB dicabut/pasang)
         navigator.mediaDevices.ondevicechange = () => {
             location.reload();
         };
