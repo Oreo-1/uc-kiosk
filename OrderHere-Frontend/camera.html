@@ -7,7 +7,7 @@
     <style>
         body { 
             margin: 0; 
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
             background: #000; 
             color: #fff; 
             display: flex; 
@@ -22,151 +22,123 @@
             width: 90%; 
             max-width: 500px; 
             aspect-ratio: 4 / 5; 
-            border-radius: 15px; 
+            border-radius: 20px; 
             overflow: hidden; 
             border: 3px solid #333;
             box-shadow: 0 0 30px rgba(249, 115, 22, 0.3);
-            transition: border-color 0.5s;
-            position: relative;
             background: #111;
         }
-
-        .video-container.connected { border-color: #f97316; }
 
         video { 
             width: 100%; 
             height: 100%; 
             object-fit: cover; 
-            transform: scaleX(-1); 
+            transform: scaleX(-1); /* Mirror effect */
         }
 
-        .status-text { 
+        .status { 
+            margin-top: 20px;
             font-size: 16px; 
-            font-weight: bold; 
             color: #f97316; 
-            margin: 20px 0; 
+            font-weight: bold;
             text-align: center;
-            padding: 0 20px;
         }
 
-        .btn-orange { 
-            padding: 16px 32px; 
+        button { 
+            margin-top: 20px;
+            padding: 16px 40px; 
             background: #f97316; 
             border: none; 
             border-radius: 50px; 
             color: white; 
-            font-size: 16px; 
+            font-size: 18px; 
             font-weight: bold; 
             cursor: pointer; 
+            display: none; /* Sembunyi sampai kamera aktif */
             box-shadow: 0 4px 15px rgba(249, 115, 22, 0.4);
-            -webkit-tap-highlight-color: transparent;
         }
-
-        .btn-switch {
-            margin-top: 10px;
-            background: transparent;
-            border: 1px solid #444;
-            color: #888;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 12px;
-            cursor: pointer;
-        }
-
-        #captureBtn { display: none; margin-top: 10px; width: 80%; max-width: 300px; }
 
         canvas { display: none; }
     </style>
 </head>
 <body>
 
-    <div class="video-container" id="vidContainer">
+    <div class="video-container">
+        <!-- Atribut playsinline wajib untuk HP/iPhone agar tidak fullscreen otomatis -->
         <video id="video" autoplay playsinline muted></video>
     </div>
 
-    <div id="status" class="status-text">Meminta Akses Kamera...</div>
+    <div class="status" id="status">Meminta Izin Kamera...</div>
     
-    <button id="captureBtn" class="btn-orange" onclick="capture()">AMBIL FOTO & DETEKSI</button>
-    
-    <button class="btn-switch" onclick="switchCamera()">Ganti Kamera</button>
+    <button id="captureBtn" onclick="capture()">FOTO & DETEKSI</button>
 
     <canvas id="canvas"></canvas>
 
     <script>
-        const video = document.getElementById("video");
+        const videoElement = document.getElementById("video");
         const statusEl = document.getElementById("status");
         const captureBtn = document.getElementById("captureBtn");
-        const vidContainer = document.getElementById("vidContainer");
         const user_id = localStorage.getItem("user_id") || "guest";
 
-        let currentFacingMode = "user"; 
-
-        async function initCamera() {
-            if (video.srcObject) {
-                video.srcObject.getTracks().forEach(track => track.stop());
-            }
-
+        // ==========================================
+        // 1. FUNGSI REQUEST CAMERA (SESUAI SNIPPET ANDA)
+        // ==========================================
+        async function requestCamera() {
             try {
-                const constraints = { 
-                    video: { 
-                        facingMode: currentFacingMode,
+                // Request camera access
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: {
+                        facingMode: "user", // Prioritaskan kamera depan HP/Tablet
                         width: { ideal: 1280 },
                         height: { ideal: 720 }
-                    },
+                    }, 
                     audio: false 
-                };
-
-                const stream = await navigator.mediaDevices.getUserMedia(constraints);
-                video.srcObject = stream;
+                });
                 
-                video.style.transform = currentFacingMode === "user" ? "scaleX(-1)" : "scaleX(1)";
+                // Assign the video stream to the video element
+                videoElement.srcObject = stream;
                 
+                // UI Update jika sukses
                 statusEl.textContent = "KAMERA AKTIF";
                 statusEl.style.color = "#22c55e";
-                vidContainer.classList.add("connected");
                 captureBtn.style.display = "block";
-
+                
             } catch (err) {
-                console.error("Camera Error:", err);
-                statusEl.textContent = "AKSES DITOLAK: Aktifkan izin kamera di pengaturan browser.";
+                // Handle errors (misal: user menolak izin)
+                console.error("Camera access denied or error occurred: ", err);
+                statusEl.textContent = "AKSES DITOLAK: Aktifkan izin kamera di bar alamat browser.";
                 statusEl.style.color = "#ef4444";
             }
         }
 
-        function switchCamera() {
-            currentFacingMode = currentFacingMode === "user" ? "environment" : "user";
-            initCamera();
-        }
+        // Jalankan fungsi saat halaman dimuat
+        window.onload = requestCamera;
 
+        // ==========================================
+        // 2. FUNGSI CAPTURE & SEND
+        // ==========================================
         function capture() {
             const canvas = document.getElementById("canvas");
             const ctx = canvas.getContext("2d");
             
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+            canvas.width = videoElement.videoWidth;
+            canvas.height = videoElement.videoHeight;
             
-            if (currentFacingMode === "user") {
-                ctx.translate(canvas.width, 0);
-                ctx.scale(-1, 1);
-            }
+            // Balik gambar di canvas agar tidak mirror (teks terbaca normal)
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
             
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
             const imageBase64 = canvas.toDataURL("image/png");
-            
+
             statusEl.textContent = "Mendeteksi Mood...";
-            statusEl.style.color = "#f97316";
-
-            // Efek visual flash
-            vidContainer.style.opacity = "0.5";
-            setTimeout(() => vidContainer.style.opacity = "1", 100);
-
             sendToAndreML(imageBase64);
         }
 
         async function sendToAndreML(image) {
             try {
-                // GANTI URL INI DENGAN URL API ML ANDA
-                const res = await fetch("https://api.anda.com/detect-mood", {
+                // Simulasi Fetch ke API ML Anda
+                const res = await fetch("https://api-anda.com/detect", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ image: image }),
@@ -175,31 +147,29 @@
                 const data = await res.json();
                 const mood = data.mood || "neutral";
 
-                statusEl.textContent = "Mood: " + mood;
+                statusEl.textContent = "Mood Terdeteksi: " + mood;
                 sendToBackend(user_id, mood);
             } catch (err) {
                 console.error(err);
-                statusEl.textContent = "Gagal kirim ke AI.";
+                statusEl.textContent = "Gagal menghubungi AI.";
             }
         }
 
         async function sendToBackend(user_id, mood) {
             try {
-                // GANTI URL INI DENGAN URL BACKEND ANDA
-                await fetch("https://api.anda.com/v1/user-mood", {
+                // Simpan hasil ke Backend
+                await fetch("https://api-anda.com/v1/save", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ user_id, mood }),
                 });
 
-                statusEl.textContent = "Sukses! Mengarahkan...";
-                setTimeout(() => window.location.href = "index.html", 1200);
+                statusEl.textContent = "Berhasil! Mengarahkan...";
+                setTimeout(() => window.location.href = "index.html", 1500);
             } catch (err) {
                 console.error(err);
             }
         }
-
-        window.onload = initCamera;
     </script>
 </body>
 </html>
