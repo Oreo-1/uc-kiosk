@@ -1,164 +1,178 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="id">
-  <head>
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Capture Mood</title>
-
+    <title>Capture Mood - Locked to FHD Camera</title>
     <style>
-      body {
-        margin: 0;
-        font-family: Arial, sans-serif;
-        background: #000;
-        color: #fff;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 100vh;
-      }
+        body { 
+            margin: 0; 
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            background: #000; 
+            color: #fff; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            overflow: hidden; 
+        }
 
-      h2 {
-        margin-bottom: 10px;
-      }
+        .video-container { 
+            width: 800px; 
+            max-width: 90%; 
+            border-radius: 20px; 
+            overflow: hidden; 
+            border: 4px solid #333;
+            box-shadow: 0 0 40px rgba(0,0,0,0.5);
+            transition: border-color 0.5s;
+        }
 
-      video {
-        width: 700px;
-        height: 600px;
-        border-radius: 12px;
-        border: 2px solid #f97316;
-      }
+        .video-container.connected {
+            border-color: #f97316;
+        }
 
-      canvas {
-        display: none;
-      }
+        video { 
+            width: 100%; 
+            background: #111; 
+            display: block;
+        }
 
-      button {
-        margin-top: 20px;
-        padding: 12px 20px;
-        background: #f97316;
-        border: none;
-        border-radius: 10px;
-        color: white;
-        font-weight: bold;
-        cursor: pointer;
-        font-size: 16px;
-      }
+        .status-text { 
+            font-size: 18px; 
+            font-weight: bold; 
+            color: #f97316; 
+            margin: 25px 0;
+            text-align: center;
+        }
 
-      .status {
-        margin-top: 15px;
-        font-size: 18px;
-        color: #ccc;
-      }
+        .error-msg {
+            color: #ef4444;
+            font-size: 14px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        button { 
+            padding: 20px 50px; 
+            background: #f97316; 
+            border: none; 
+            border-radius: 50px; 
+            color: white; 
+            font-size: 18px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            transition: all 0.3s;
+            display: none; /* Muncul hanya jika kamera yang benar aktif */
+            box-shadow: 0 4px 15px rgba(249, 115, 22, 0.4);
+        }
+
+        button:hover { 
+            background: #fb923c; 
+            transform: translateY(-3px); 
+        }
+
+        canvas { display: none; }
     </style>
-  </head>
+</head>
+<body>
 
-  <body>
-    <h2>Tunjukkan wajah Anda ke kamera</h2>
+    <div class="video-container" id="vidContainer">
+        <video id="video" autoplay playsinline></video>
+    </div>
 
-    <video id="video" autoplay></video>
+    <div id="status" class="status-text">Menghubungkan ke FHD Camera...</div>
+    <div id="error" class="error-msg"></div>
+    
+    <button id="captureBtn" onclick="capture()">Ambil Foto & Deteksi</button>
+
     <canvas id="canvas"></canvas>
 
-    <button onclick="capture()">Foto & Deteksi</button>
-
-    <div class="status" id="status">Menunggu kamera...</div>
-
     <script>
-      const video = document.getElementById("video");
-      const canvas = document.getElementById("canvas");
-      const statusEl = document.getElementById("status");
-      const user_id = localStorage.getItem("user_id");
+        const video = document.getElementById("video");
+        const statusEl = document.getElementById("status");
+        const errorEl = document.getElementById("error");
+        const captureBtn = document.getElementById("captureBtn");
+        const vidContainer = document.getElementById("vidContainer");
+        
+        // NAMA SPESIFIK KAMERA ANDA
+        const TARGET_CAMERA_NAME = "FHD Camera (1bcf:28c4)";
 
-      // =======================
-      // 1. START CAMERA
-      // =======================
-      async function startCamera() {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: true,
-          });
+        async function initSpecificCamera() {
+            try {
+                // 1. Minta izin akses (Wajib agar label terbaca)
+                const streamInit = await navigator.mediaDevices.getUserMedia({ video: true });
+                streamInit.getTracks().forEach(t => t.stop());
 
-          video.srcObject = stream;
-          statusEl.textContent = "Kamera siap mengambil foto";
-        } catch (err) {
-          console.error(err);
-          statusEl.textContent = "Gagal akses kamera";
+                // 2. Scan semua daftar kamera
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = devices.filter(d => d.kind === 'videoinput');
+
+                // 3. Cari kamera yang mengandung nama TARGET
+                const myExternalCam = videoDevices.find(d => d.label.includes("FHD Camera"));
+
+                if (myExternalCam) {
+                    startStream(myExternalCam.deviceId);
+                } else {
+                    statusEl.textContent = "SISTEM ERROR";
+                    statusEl.style.color = "#ef4444";
+                    errorEl.textContent = `Kamera "${TARGET_CAMERA_NAME}" tidak terdeteksi. Periksa kabel USB.`;
+                    errorEl.style.display = "block";
+                }
+
+            } catch (err) {
+                statusEl.textContent = "Akses Kamera Ditolak";
+                errorEl.textContent = "Pastikan Anda memberikan izin akses kamera di browser.";
+                errorEl.style.display = "block";
+            }
         }
-      }
 
-      startCamera();
+        function startStream(deviceId) {
+            const constraints = {
+                video: { 
+                    deviceId: { exact: deviceId },
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 }
+                }
+            };
 
-      // =======================
-      // 2. CAPTURE IMAGE
-      // =======================
-      function capture() {
-        const ctx = canvas.getContext("2d");
-
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-
-        ctx.drawImage(video, 0, 0);
-
-        const imageBase64 = canvas.toDataURL("image/png");
-
-        statusEl.textContent = "Mengirim ke AI...";
-
-       //sendTo??(imageBase64);
-      }
-
-      async function sendToAndreML(image) { // ganti nama function ini sesuai ML yang dipakai nanti
-        try {
-          const res = await fetch("??", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              image: image,
-            }),
-          });
-
-          const data = await res.json();
-
-          const mood = data.mood;
-
-          statusEl.textContent = "Mood terdeteksi: " + mood;
-
-          sendToBackend(user_id, mood);
-        } catch (err) {
-          console.error(err);
-          statusEl.textContent = "Gagal kirim ke ML";
+            navigator.mediaDevices.getUserMedia(constraints)
+                .then(stream => {
+                    video.srcObject = stream;
+                    statusEl.textContent = "KAMERA EKSTERNAL AKTIF";
+                    statusEl.style.color = "#22c55e"; // Warna Hijau
+                    vidContainer.classList.add("connected");
+                    captureBtn.style.display = "block";
+                })
+                .catch(err => {
+                    statusEl.textContent = "Gagal Memuat Stream";
+                    console.error(err);
+                });
         }
-      }
 
-      // =======================
-      // 4. SEND TO YOUR BACKEND
-      // =======================
-      async function sendToBackend(user_id, mood) {
-        try {
-          const res = await fetch("", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              user_id,
-              mood,
-            }),
-          });
-
-          await res.json();
-
-          statusEl.textContent = "Sukses! Mengarahkan...";
-
-          setTimeout(() => {
-            window.location.href = "index.html";
-          }, 1200);
-        } catch (err) {
-          console.error(err);
-          statusEl.textContent = "Gagal kirim ke backend";
+        function capture() {
+            const canvas = document.getElementById("canvas");
+            const ctx = canvas.getContext("2d");
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            // Gambar frame
+            ctx.drawImage(video, 0, 0);
+            
+            const base64 = canvas.toDataURL("image/png");
+            statusEl.textContent = "Foto Berhasil Diambil!";
+            
+            // Integrasikan dengan fungsi sendToAndreML(base64) Anda di sini
+            alert("Memproses Wajah...");
         }
-      }
+
+        // Jalankan otomatis saat halaman dimuat
+        window.onload = initSpecificCamera;
+
+        // Jika kamera dicabut/pasang, sistem akan mengecek ulang
+        navigator.mediaDevices.ondevicechange = () => {
+            location.reload();
+        };
     </script>
-  </body>
+</body>
 </html>
