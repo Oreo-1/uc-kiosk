@@ -15,7 +15,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      background: #ffffff; /* ✅ PUTIH POLOS */
+      background: #ffffff;
       padding: 20px;
     }
 
@@ -33,7 +33,7 @@
 
     .card {
       width: 100%;
-      background: #f8f9fa; /* ✅ Soft white/gray agar kontras */
+      background: #f8f9fa;
       border: 1px solid #e9ecef;
       border-radius: 24px;
       padding: 48px 40px;
@@ -136,7 +136,7 @@
       width: 100%;
       max-width: 320px;
       padding: 16px 24px;
-      background: linear-gradient(135deg, #FF9933 0%, #FF6600 100%); /* ✅ ORANGE */
+      background: linear-gradient(135deg, #FF9933 0%, #FF6600 100%);
       color: white;
       border: none;
       border-radius: 12px;
@@ -284,7 +284,6 @@
       alt="Tunai" style="display:none;">
 
     <div class="qris-wrap" id="qris-wrap" style="display:none;">
-      <!-- Gambar akan digenerate otomatis oleh JS -->
       <div class="qris-placeholder">Generating QR Code...</div>
     </div>
 
@@ -505,19 +504,23 @@
     }
     document.getElementById('summary-total').textContent = formatRp(total);
 
-    // Update item label
+    // ✅ UPDATE ITEM LABEL - FIX: Handle quantity undefined
     let itemLabel = '—';
     const foods = order.foods || [];
+    
     if (foods.length > 0) {
       const firstItem = foods[0];
       const firstName = firstItem.food ? firstItem.food.name : (firstItem.name || 'Item');
-      const qty = firstItem.quantity || firstItem.pivot?.quantity || 1;
+      // FIX: Cek pivot.quantity (dari Laravel API) atau quantity langsung
+      const qty = firstItem.pivot?.quantity || firstItem.quantity || 1;
       itemLabel = foods.length === 1 ? `${firstName} x${qty}` : `${firstName} & ${foods.length - 1} lainnya`;
     } else {
       const cart = JSON.parse(localStorage.getItem('cart') || '[]');
       if (cart.length > 0) {
         const firstItem = cart[0];
-        itemLabel = cart.length === 1 ? `${firstItem.name} x${firstItem.quantity}` : `${firstItem.name} & ${cart.length - 1} lainnya`;
+        // FIX: Pastikan quantity ada, default ke 1 jika undefined
+        const quantity = firstItem.quantity || 1;
+        itemLabel = cart.length === 1 ? `${firstItem.name} x${quantity}` : `${firstItem.name} & ${cart.length - 1} lainnya`;
       }
     }
     document.getElementById('summary-items').textContent = itemLabel;
