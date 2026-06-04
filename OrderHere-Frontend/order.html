@@ -868,7 +868,7 @@
 
           // 2. Tarik Data Rekomendasi dari API ML
           try {
-            const mlUrl = `http://127.0.0.1:8000/recommend-external/${MOOD_PLACEHOLDER}/${USER_ID_PLACEHOLDER}`;
+            const mlUrl = `https://api-ml.aryo.fyi/recommend-external/${MOOD_PLACEHOLDER}/${USER_ID_PLACEHOLDER}`;
             const recRes = await fetch(mlUrl);
             const recJson = await recRes.json();
             if (recJson && recJson.vendors) {
