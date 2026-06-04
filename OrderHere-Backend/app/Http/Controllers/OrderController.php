@@ -176,6 +176,7 @@ class OrderController extends Controller
                         'quantity'    => $foodItem['quantity'],
                         'total_price' => $foodItem['total_price'],
                         'notes'       => $foodItem['notes'],
+                        'parent_food_id'   => null,
                     ]);
                 }
 
