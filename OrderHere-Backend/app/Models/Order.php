@@ -2,37 +2,38 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Order extends Model
 {
-    // 'order' is a SQL reserved word, but Laravel handles it safely via $table
+    use HasFactory;
+
+    // ✅ Nama tabel yang benar
     protected $table = 'order';
-    protected $primaryKey = 'id';
-    public $timestamps = true;
 
+    // ✅ Semua field yang boleh di-mass-assign
     protected $fillable = [
-        'vendor_id', 'dining_type', 'status', 'queue_number', 'total_price', 'total_estimated', 'notes_order'
+        'vendor_id',
+        'dining_type',
+        'payment_method',
+        'notes_order',
+        'status',
+        'queue_number',
+        'total_price',
+        'total_estimated',
     ];
 
-    protected $casts = [
-        'dining_type' => 'string',
-        'queue_number' => 'integer',
-        'total_price' => 'decimal:2',
-        'total_estimated' => 'integer',
-        'notes_order' => 'string',
-    ];
-
-    public function vendor(): BelongsTo
+    // Relasi ke vendor
+    public function vendor()
     {
-        return $this->belongsTo(Vendor::class, 'vendor_id', 'id');
+        return $this->belongsTo(Vendor::class, 'vendor_id');
     }
 
-    public function foods(): BelongsToMany
-    {
-        return $this->belongsToMany(Food::class, 'order_food', 'order_id', 'food_id')
-                    ->withPivot('quantity', 'total_price', 'notes');
-    }
+    // Relasi ke food (many-to-many via order_food)
+public function foods()
+{
+    return $this->belongsToMany(Food::class, 'order_food', 'order_id', 'food_id')
+        ->withPivot('quantity', 'total_price', 'notes', 'parent_food_id');
+}
 }

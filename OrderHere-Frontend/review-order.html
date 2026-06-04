@@ -269,6 +269,55 @@
     }
     .btn-lakukan:hover { opacity: 0.9; }
     .btn-lakukan:active { transform: scale(0.98); }
+    .btn-lakukan:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* Error Toast Snackbar */
+    .error-toast {
+      position: fixed;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: linear-gradient(135deg, #dc2626, #991b1b);
+      color: white;
+      padding: 16px 32px;
+      border-radius: 50px;
+      font-size: 16px;
+      font-weight: 700;
+      box-shadow: 
+        0 6px 30px rgba(220, 38, 38, 0.6),
+        0 0 40px rgba(220, 38, 38, 0.4);
+      border: 3px solid #dc2626;
+      opacity: 0;
+      transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      z-index: 2000;
+      white-space: nowrap;
+      letter-spacing: 0.3px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: 90%;
+    }
+
+    .error-toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    .error-toast.hide {
+      transform: translateX(-50%) translateY(100px);
+      opacity: 0;
+    }
+
+    .error-toast-icon {
+      font-size: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .error-toast {
+        font-size: 14px;
+        padding: 14px 24px;
+      }
+    }
   </style>
   <link rel="stylesheet" href="main.css" />
   <script src="config.js"></script>
@@ -337,10 +386,16 @@
 
   </div>
   <div class="pay-footer">
-    <button class="btn-lakukan" onclick="handleLakukanPembayaran()">
+    <button class="btn-lakukan" id="btn-lakukan" onclick="handleLakukanPembayaran()">
       Lakukan Pembayaran &nbsp;→
     </button>
   </div>
+</div>
+
+<!-- Error Toast -->
+<div class="error-toast" id="errorToast">
+  <span class="error-toast-icon">⚠️</span>
+  <span id="errorToastMessage">Terjadi kesalahan</span>
 </div>
 
 <script>
@@ -407,10 +462,25 @@
   // ── PAYMENT SHEET STATE ──────────────────────
   let selectedPayment = null;
 
+  // ── ERROR TOAST FUNCTION ─────────────────────
+  function showErrorToast(message) {
+    const toast = document.getElementById('errorToast');
+    const msgEl = document.getElementById('errorToastMessage');
+    
+    msgEl.textContent = message;
+    toast.classList.remove('hide');
+    toast.classList.add('show');
+    
+    setTimeout(() => {
+      toast.classList.remove('show');
+      toast.classList.add('hide');
+    }, 4000);
+  }
+
   // ── HANDLE PESAN: BUKA PAYMENT SHEET ──────────────
   function handlePesan() {
     if (cart.length === 0) {
-      alert('Keranjang kosong!');
+      showErrorToast('Keranjang kosong!');
       return;
     }
     
@@ -443,26 +513,29 @@
 
   // ── HANDLE LAKUKAN PEMBAYARAN: SUBMIT TO API ────────────────
   async function handleLakukanPembayaran() {
+    // Prevent default behavior
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
     const nama = document.getElementById('pay-name').value.trim();
     
     if (!selectedPayment) { 
-      alert('Pilih metode pembayaran dulu.'); 
+      showErrorToast('Pilih metode pembayaran dulu.');
       return; 
     }
 
-    const btn = document.querySelector('.btn-lakukan');
+    const btn = document.getElementById('btn-lakukan');
     const originalText = btn.innerHTML;
     btn.textContent = 'Memproses...';
     btn.disabled = true;
 
     try {
-      // 1. Cek isi variabel sebelum dikirim
-      console.log("DEBUG: Variabel diningType saat ini:", diningType);
-
       const payload = {
         dining_type: diningType, 
         payment_method: selectedPayment.toUpperCase(),
-        notes_order: nama, // ✅ TAMBAHAN FIELD NOTES_ORDER
+        notes_order: nama,
         foods: cart.map(item => ({
           food_id: item.food_id, 
           quantity: item.qty,
@@ -470,8 +543,11 @@
         }))
       };
 
-      // 2. Log Payload yang akan dikirim (cek apakah food_id ada nilainya)
-      console.log('DEBUG: Payload yang dikirim ke Server:', JSON.stringify(payload, null, 2));
+      console.log('═══════════════════════════════════════');
+      console.log('📤 PAYLOAD YANG DIKIRIM:');
+      console.log('URL:', `${API_CONFIG.BASE_URL}/orders`);
+      console.log('Payload:', JSON.stringify(payload, null, 2));
+      console.log('═══════════════════════════════════════');
 
       const response = await fetch(`${API_CONFIG.BASE_URL}/orders`, {
         method: 'POST',
@@ -484,41 +560,90 @@
 
       const result = await response.json();
 
+      console.log('═══════════════════════════════════════');
+      console.log('📥 RESPONSE DARI SERVER:');
+      console.log('Status:', response.status, response.statusText);
+      console.log('Response:', JSON.stringify(result, null, 2));
+      console.log('═══════════════════════════════════════');
+
       if (response.ok && result.success) {
-        console.log('SUCCESS:', result);
+        console.log('✅ SUCCESS! Redirecting...');
         sessionStorage.setItem('order', JSON.stringify(result.data));
         sessionStorage.setItem('antrian', result.data.queue_number);
         sessionStorage.setItem('paymentMethod', selectedPayment.toUpperCase());
         clearCart();
         window.location.href = 'payment.html';
       } else {
-        // 3. LOG DETAIL ERROR DARI LARAVEL (PENTING!)
-        console.error('--- DETAIL VALIDASI GAGAL (422) ---');
+        console.error('❌ ERROR RESPONSE:', result);
+        
+        let errorMsg = 'Gagal membuat pesanan.';
+        
         if (result.errors) {
-          // Menampilkan tabel error agar mudah dibaca di console
-          console.table(result.errors);
-        } else {
-          console.log('Pesan Error:', result.message);
+          console.error('Validation errors:', result.errors);
+          const firstErrorField = Object.keys(result.errors)[0];
+          errorMsg = result.errors[firstErrorField][0];
+        } else if (result.message) {
+          console.error('Error message:', result.message);
+          
+          if (result.message.includes('Database error') || 
+              result.message.includes('SQLSTATE') ||
+              result.message.includes('gone away')) {
+            errorMsg = 'Koneksi server terganggu. Silakan coba beberapa saat lagi.';
+          } else if (result.message.includes('Validation failed')) {
+            errorMsg = 'Data pesanan tidak valid.';
+          } else if (result.message.includes('Food not available')) {
+            errorMsg = 'Menu tidak tersedia.';
+          } else if (result.message.includes('Invalid cart')) {
+            errorMsg = 'Pesanan tidak valid.';
+          } else {
+            errorMsg = result.message;
+          }
         }
         
-        // Munculkan pesan spesifik ke user
-        let errorMsg = result.message || 'Gagal membuat pesanan';
-        if (result.errors) {
-            // Mengambil pesan error pertama
-            const firstErrorField = Object.keys(result.errors)[0];
-            errorMsg = result.errors[firstErrorField][0];
-        }
-        throw new Error(errorMsg);
+        showErrorToast(errorMsg);
+        
+        // Kembalikan tombol
+        btn.innerHTML = originalText;
+        btn.disabled = false;
       }
 
     } catch (err) {
-      console.error('CATCH ERROR:', err);
-      alert('Terjadi kesalahan: ' + err.message);
+      console.error('═══════════════════════════════════════');
+      console.error('❌ CATCH ERROR:');
+      console.error('Error:', err);
+      console.error('Message:', err.message);
+      console.error('Stack:', err.stack);
+      console.error('═══════════════════════════════════════');
+      
+      let errorMsg = 'Terjadi kesalahan. Silakan coba lagi.';
+      
+      if (err.message && err.message.includes('Failed to fetch')) {
+        errorMsg = 'Tidak dapat terhubung ke server.';
+      } else if (err.message && err.message.includes('timeout')) {
+        errorMsg = 'Request timeout.';
+      }
+      
+      showErrorToast(errorMsg);
+      
+      // Kembalikan tombol
       btn.innerHTML = originalText;
       btn.disabled = false;
     }
   }
   
-  </script>
+  // Global error handler
+  window.onerror = function(msg, url, lineNo, columnNo, error) {
+    console.error('GLOBAL ERROR:', msg, url, lineNo, columnNo, error);
+    showErrorToast('Error sistem: ' + msg);
+    return false;
+  };
+
+  // Handle unhandled promise rejections
+  window.addEventListener('unhandledrejection', function(event) {
+    console.error('UNHANDLED PROMISE REJECTION:', event.reason);
+    showErrorToast('Error: ' + event.reason);
+    event.preventDefault();
+  });
+</script>
 </body>
 </html>
