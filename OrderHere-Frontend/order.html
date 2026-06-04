@@ -341,25 +341,22 @@
 <div class="page">
 
   <div class="main">
-    <div class="vendor-row">
-      <!-- Vendor akan di-render otomatis oleh JavaScript -->
-    </div>
+    <div class="vendor-row"></div>
 
     <div class="vendor-header">
       <h2 class="vendor-title" id="vendor-title">Loading...</h2>
       <div class="filter-row">
         <button class="filter-tag active" onclick="setFilter(this, 'all')">Semua</button>
-        <button class="filter-tag" onclick="setFilter(this, 'makanan')">Makanan</button>
-        <button class="filter-tag" onclick="setFilter(this, 'minuman')">Minuman</button>
-        <button class="filter-tag" onclick="setFilter(this, 'snack')">Snack</button>
-        <button class="filter-tag" onclick="setFilter(this, 'paket')">Rekomendasi</button>
+        <button class="filter-tag" onclick="setFilter(this, 'Karbo')">Karbo</button>
+        <button class="filter-tag" onclick="setFilter(this, 'Lauk')">Lauk</button>
+        <button class="filter-tag" onclick="setFilter(this, 'Sayur')">Sayur</button>
+        <button class="filter-tag" onclick="setFilter(this, 'Minuman')">Minuman</button>
+        <button class="filter-tag" onclick="setFilter(this, 'Snack')">Snack</button>
       </div>
     </div>
 
     <div class="menu-grid-wrapper">
-      <div class="menu-grid" id="menu-grid">
-        <!-- Menu dirender otomatis oleh JavaScript -->
-      </div>
+      <div class="menu-grid" id="menu-grid"></div>
     </div>
   </div>
 
@@ -372,8 +369,7 @@
 
     <div class="order-items" id="order-items">
       <div class="cart-empty" id="cart-empty">
-        <img src="assets/order-page/hantu.svg"
-          onerror="this.outerHTML='<span class=\'cart-empty-icon\'>👻</span>'" alt="">
+        <img src="assets/order-page/hantu.svg" onerror="this.outerHTML='<span class=\'cart-empty-icon\'>👻</span>'" alt="">
         <span class="cart-empty-text">Cart Kosong..</span>
       </div>
     </div>
@@ -414,15 +410,12 @@
 
       <div class="sheet-section">
         <p class="sheet-section-title">Catatan</p>
-        <textarea class="sheet-textarea" id="sheet-catatan" placeholder="Contoh: jangan pakai bawang, sambal dipisah..."
-          rows="3"></textarea>
+        <textarea class="sheet-textarea" id="sheet-catatan" placeholder="Contoh: jangan pakai bawang, sambal dipisah..." rows="3"></textarea>
       </div>
     </div>
 
     <div class="sheet-footer">
-      <button class="btn-tambah" onclick="confirmAddToOrder()">
-        Tambahkan Pesanan &nbsp;→
-      </button>
+      <button class="btn-tambah" onclick="confirmAddToOrder()">Tambahkan Pesanan &nbsp;→</button>
     </div>
   </div>
 
@@ -437,19 +430,40 @@
   let sheetQty = 1;
   let selectedSpice = null;
   let selectedAddons = [];
-  
-  // ✅ LOAD CART & DINING TYPE DARI LOCALSTORAGE
   let cart = getCart();
   const diningType = getDiningType();
+
+  // ── FITUR AUTO-DETECT KATEGORI (EMBEDDED) ─────
+  const CATEGORY_KEYWORDS = {
+    'Karbo': ['nasi', 'mie', 'pasta', 'roti', 'kentang', 'bubur', 'lontong', 'ketupat', 'bihun', 'spaghetti', 'makaroni'],
+    'Lauk': ['ayam', 'ikan', 'daging', 'sapi', 'telur', 'bakso', 'nugget', 'sosis', 'udang', 'cumi', 'bebek', 'kambing', 'lele', 'empal', 'tempe', 'tahu'],
+    'Sayur': ['sayur', 'sop', 'tumis', 'capcay', 'gado', 'urap', 'lalap', 'bayam', 'kangkung', 'asem', 'lodeh', 'plecing', 'pecel', 'sup', 'brokoli'],
+    'Minuman': ['es', 'jus', 'kopi', 'teh', 'soda', 'air', 'susu', 'jeruk', 'mango', 'lemon', 'coffe', 'latte', 'matcha', 'cappuccino', 'coklat', 'choco', 'sirup', 'alpukat', 'melon'],
+    'Snack': ['gorengan', 'keripik', 'kue', 'sandwich', 'salad', 'martabak', 'cilok', 'cimol', 'siomay', 'batagor', 'pisang goreng', 'donat', 'lumpia', 'pastel', 'risoles', 'bakwan', 'brownies', 'cookies', 'pudding', 'es krim']
+  };
+
+  function getSmartCategory(food) {
+    const dbType = food.type;
+    if (['Karbo', 'Lauk', 'Sayur', 'Minuman', 'Snack'].includes(dbType)) {
+      return dbType;
+    }
+    const foodName = food.name.toLowerCase();
+    for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+      if (keywords.some(keyword => foodName.includes(keyword))) {
+        return category;
+      }
+    }
+    if (dbType === 'DRINK') return 'Minuman';
+    if (dbType === 'FOOD') return 'Lauk';
+    if (dbType === 'SNACK') return 'Snack';
+    return 'Snack';
+  }
 
   // ── FETCH FOODS & VENDORS ──────────────────────
   async function loadData() {
     try {
-      // 1. Ambil semua makanan + relasi vendor/addon
       const res = await apiFetch('/foods?per_page=100');
       allFoods = res.data;
-
-      // 2. ✅ EKSTRAK VENDOR OTOMATIS DARI DATA MAKANAN
       const vendorMap = new Map();
       allFoods.forEach(food => {
         if (food.vendor && !vendorMap.has(food.vendor.id)) {
@@ -457,112 +471,84 @@
         }
       });
       allVendors = Array.from(vendorMap.values());
-
-      // 3. Render Vendor & Makanan
       renderVendors(allVendors);
       if (allVendors.length > 0) {
-        currentVendorId = allVendors[0].id; // Set default vendor
+        currentVendorId = allVendors[0].id;
         selectVendor(currentVendorId);
       } else {
         document.getElementById('menu-grid').innerHTML = '<p>Tidak ada vendor.</p>';
       }
-
     } catch (err) {
       console.error('Failed to load data:', err);
       document.getElementById('menu-grid').innerHTML = '<p style="color:red">Gagal load data</p>';
     }
   }
 
-  // ── RENDER VENDORS (DYNAMIC) ─────────────────
   function renderVendors(vendors) {
     const container = document.querySelector('.vendor-row');
-    container.innerHTML = ''; 
-
+    container.innerHTML = '';
     vendors.forEach((vendor, index) => {
       const div = document.createElement('div');
       div.className = `vendor-card ${index === 0 ? 'active' : ''}`;
       div.id = `vendor-${vendor.id}`;
       div.onclick = () => selectVendor(vendor.id);
-      
       div.innerHTML = `
-        <div class="vendor-logo">
-          <span style="font-size:24px">🏪</span> 
-        </div>
+        <div class="vendor-logo"><span style="font-size:24px">🏪</span></div>
         <span class="vendor-name">${vendor.name}</span>
       `;
       container.appendChild(div);
     });
   }
 
-  // ── SELECT VENDOR & FILTER ───────────────────
   function selectVendor(vendorId) {
     currentVendorId = vendorId;
-    
     document.querySelectorAll('.vendor-card').forEach(c => c.classList.remove('active'));
     const activeCard = document.getElementById(`vendor-${vendorId}`);
     if(activeCard) activeCard.classList.add('active');
-
     const vendor = allVendors.find(v => v.id === vendorId);
     if(vendor) document.getElementById('vendor-title').textContent = vendor.name;
-
     renderFoods(allFoods.filter(f => f.vendor_id === vendorId));
   }
 
   function setFilter(el, category) {
     document.querySelectorAll('.filter-tag').forEach(t => t.classList.remove('active'));
     el.classList.add('active');
-
     const filtered = allFoods.filter(f => {
       const matchVendor = f.vendor_id === currentVendorId;
-      const matchCat = category === 'all' ? true : CATEGORY_MAP[f.type] === category;
+      const foodCategory = getSmartCategory(f);
+      const matchCat = category === 'all' ? true : foodCategory === category;
       return matchVendor && matchCat;
     });
     renderFoods(filtered);
   }
 
-  // ── RENDER FOODS (WITH IMAGES & REAL DATA) ───
   function renderFoods(foods) {
     const grid = document.getElementById('menu-grid');
     if (!grid) return;
-    
     grid.innerHTML = '';
-
     if (foods.length === 0) {
       grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;padding:20px;">Menu kosong</p>';
       return;
     }
-    
     foods.forEach(food => {
-      const category = CATEGORY_MAP[food.type] || food.type.toLowerCase();
+      const category = getSmartCategory(food);
       const isSoldOut = !food.active;
       const emoji = getEmojiByType(food.type);
-      
-      // ✅ GAMBAR DARI DATABASE
       const imgUrl = getImageUrl(food.image);
-      const imgHTML = imgUrl 
-        ? `<img src="${imgUrl}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` 
-        : '';
-      
+      const imgHTML = imgUrl ? `<img src="${imgUrl}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` : '';
       const card = document.createElement('div');
       card.className = `menu-card ${isSoldOut ? 'sold-out' : ''}`;
-      
-      // ✅ SIMPAN DATA LENGKAP DI DATASET
       card.dataset.id = food.id;
       card.dataset.name = food.name;
       card.dataset.price = food.price;
       card.dataset.est = food.estimated_time;
       card.dataset.category = category;
-      
-      // ✅ SPICE & ADDONS DARI DATABASE
-      card.dataset.spice = JSON.stringify(food.spice || []); 
-      
-      // Mapping addons dari relasi Laravel
+      card.dataset.spice = JSON.stringify(food.spice || []);
       const dbAddons = (food.addons || []).map(a => ({
         label: a.addon ? a.addon.name : 'Tambahan',
         price: a.pivot ? a.pivot.extra_price : 0
       }));
       card.dataset.addons = JSON.stringify(dbAddons);
-
       card.innerHTML = `
         <div class="menu-img-wrap">
           ${imgHTML}
@@ -574,11 +560,9 @@
           <p class="menu-price">${formatRp(food.price)}</p>
         </div>
       `;
-
       if (!isSoldOut) {
         card.onclick = () => openSheet(card);
       }
-      
       grid.appendChild(card);
     });
   }
@@ -588,11 +572,9 @@
     return map[type] || '🍴';
   }
 
-  // ── BOTTOM SHEET LOGIC ───────────────────────
   function openSheet(card) {
     document.getElementById('sheet-catatan').value = '';
     const d = card.dataset;
-    
     sheetData = {
       id: d.id,
       name: d.name,
@@ -602,20 +584,16 @@
       spice: JSON.parse(d.spice || '[]'),
       addons: JSON.parse(d.addons || '[]'),
     };
-    
     sheetQty = 1;
     selectedSpice = null;
     selectedAddons = [];
-
     document.getElementById('sheet-name').textContent = sheetData.name;
     document.getElementById('sheet-qty').textContent = 1;
     document.getElementById('sheet-img').textContent = sheetData.emoji;
     document.getElementById('sheet-est-text').innerHTML = `*estimasi waktu : <strong>${sheetData.est} menit</strong>`;
     updateSheetPrice();
-
     renderSpiceOptions();
     renderAddonOptions();
-
     document.getElementById('sheet-overlay').classList.add('open');
     document.getElementById('bottom-sheet').classList.add('open');
   }
@@ -623,9 +601,7 @@
   function renderSpiceOptions() {
     const spiceSec = document.getElementById('sheet-spice-section');
     const spiceCon = document.getElementById('sheet-spice-options');
-    
     const spiceList = sheetData.spice.length > 0 ? sheetData.spice : ['Tidak Pedas', 'Sedang', 'Pedas'];
-
     if (spiceList.length) {
       spiceSec.style.display = '';
       spiceCon.innerHTML = spiceList.map(s => `
@@ -641,7 +617,6 @@
   function renderAddonOptions() {
     const addonSec = document.getElementById('sheet-addon-section');
     const addonCon = document.getElementById('sheet-addon-options');
-    
     if (sheetData.addons.length) {
       addonSec.style.display = '';
       addonCon.innerHTML = sheetData.addons.map((a,i) => `
@@ -692,12 +667,10 @@
     document.getElementById('sheet-price').textContent = formatRp(total);
   }
 
-  // ── CART LOGIC ───────────────────────────────
   function confirmAddToOrder() {
     const catatan = document.getElementById('sheet-catatan').value.trim();
     const addonLabels = selectedAddons.map(a => a.label);
     const key = sheetData.name + '|' + (selectedSpice || '') + '|' + addonLabels.sort().join(',');
-
     const existing = cart.find(i => i.key === key);
     if (existing) {
       existing.qty += sheetQty;
@@ -721,24 +694,16 @@
     renderCart();
   }
 
-  function removeFromCart(id) { 
-    cart = cart.filter(i => i.id !== id); 
-    renderCart(); 
-  }
-  
+  function removeFromCart(id) { cart = cart.filter(i => i.id !== id); renderCart(); }
   function changeCartQty(id, delta) {
     const item = cart.find(i => i.id === id);
-    if (item) { 
-      item.qty = Math.max(1, item.qty + delta); 
-      renderCart(); 
-    }
+    if (item) { item.qty = Math.max(1, item.qty + delta); renderCart(); }
   }
 
   function renderCart() {
     const container = document.getElementById('order-items');
     const emptyEl = document.getElementById('cart-empty');
     const badge = document.getElementById('order-count');
-
     if (cart.length === 0) {
       container.querySelectorAll('.cart-item').forEach(el => el.remove());
       emptyEl.style.display = 'flex';
@@ -748,17 +713,14 @@
       badge.style.display = 'none';
       return;
     }
-
     emptyEl.style.display = 'none';
     let total = 0, maxEst = 0, count = 0;
-
     const html = cart.map(item => {
       const lineTotal = (item.basePrice + item.addonAmt) * item.qty;
       total += lineTotal;
       maxEst = Math.max(maxEst, item.est);
       count += item.qty;
       const noteText = [item.spice, ...item.addons, item.catatan].filter(Boolean).join(' · ');
-
       return `
         <div class="cart-item">
           <div class="cart-item-top">
@@ -777,10 +739,8 @@
           </div>
         </div>`;
     }).join('');
-
     container.querySelectorAll('.cart-item').forEach(el => el.remove());
     emptyEl.insertAdjacentHTML('afterend', html);
-
     document.getElementById('order-total').textContent = formatRp(total);
     document.getElementById('order-est').innerHTML = `*estimasi waktu : <strong>${maxEst} menit</strong>`;
     document.getElementById('btn-pesan').disabled = false;
@@ -790,22 +750,13 @@
 
   function handlePesan() {
     if (cart.length === 0) return;
-    
-    // ✅ SIMPAN CART KE LOCALSTORAGE (SUDAH OTOMATIS VIA saveCart)
     saveCart(cart);
-    
-    // Simpan maxEst untuk halaman berikutnya
     sessionStorage.setItem('maxEst', Math.max(...cart.map(i => i.est)));
-    
-    // Redirect ke review-order.html
     window.location.href = 'review-order.html';
   }
 
-  // ── INIT ─────────────────────────────────────
   document.addEventListener('DOMContentLoaded', () => {
-    loadData(); // ✅ START FETCHING
-    
-    // ✅ TAMPILKAN DINING TYPE DARI LOCALSTORAGE
+    loadData();
     const badge = document.getElementById('order-type-badge');
     if (badge) badge.textContent = diningType;
   });
