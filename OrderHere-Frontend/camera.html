@@ -22,7 +22,7 @@
             justify-content: center; 
             min-height: 100vh; 
             min-height: -webkit-fill-available;
-            overflow: hidden;
+            overflow-x: hidden;
             padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
         }
 
@@ -38,7 +38,6 @@
             position: relative;
         }
 
-        /* Desktop: aspect ratio lebih lebar */
         @media (min-width: 768px) {
             .video-container {
                 max-width: 640px;
@@ -90,6 +89,75 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
+        /* ✅ ERROR BOX - Lebih terlihat & scrollable */
+        .error-box {
+            margin: 15px 20px;
+            padding: 16px;
+            background: linear-gradient(135deg, #7f1d1d, #991b1b);
+            border: 3px solid #dc2626;
+            border-radius: 12px;
+            font-size: 12px;
+            text-align: left;
+            display: none;
+            max-width: 600px;
+            width: 90%;
+            color: #fff;
+            animation: fadeIn 0.3s, pulse 2s infinite;
+            box-shadow: 0 0 30px rgba(220, 38, 38, 0.5);
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 30px rgba(220, 38, 38, 0.5); }
+            50% { box-shadow: 0 0 50px rgba(220, 38, 38, 0.8); }
+        }
+
+        .error-box h4 {
+            margin: 0 0 12px 0;
+            color: #fca5a5;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .error-box .error-section {
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 8px;
+            border-left: 3px solid #fbbf24;
+        }
+
+        .error-box .error-label {
+            color: #fbbf24;
+            font-size: 11px;
+            text-transform: uppercase;
+            font-weight: bold;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .error-box .error-value {
+            background: rgba(31, 41, 55, 0.8);
+            padding: 8px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            word-break: break-all;
+            color: #fbbf24;
+            white-space: pre-wrap;
+        }
+
+        .error-box .error-highlight {
+            background: rgba(251, 191, 36, 0.2);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #fde047;
+            font-weight: bold;
+        }
+
         .camera-select-container {
             margin-top: 10px;
             width: 90%;
@@ -116,6 +184,7 @@
             margin-top: 15px;
             flex-wrap: wrap;
             justify-content: center;
+            margin-bottom: 20px;
         }
 
         button { 
@@ -140,6 +209,23 @@
         .btn-secondary {
             background: #374151;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-danger {
+            background: #dc2626;
+            box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);
+            animation: shake 0.5s;
+        }
+
+        .btn-success {
+            background: #16a34a;
+            box-shadow: 0 4px 15px rgba(22, 163, 74, 0.4);
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
         }
 
         canvas { display: none; }
@@ -204,18 +290,16 @@
             margin-top: 6px;
         }
 
-        /* Desktop: keyboard shortcut hint */
         .shortcut-hint {
             margin-top: 10px;
+            margin-bottom: 10px;
             font-size: 12px;
             color: #6b7280;
             display: none;
         }
 
         @media (min-width: 768px) {
-            .shortcut-hint {
-                display: block;
-            }
+            .shortcut-hint { display: block; }
         }
 
         .shortcut-hint kbd {
@@ -224,6 +308,21 @@
             border-radius: 4px;
             font-family: monospace;
             border: 1px solid #4b5563;
+        }
+
+        /* Scroll indicator */
+        .scroll-hint {
+            text-align: center;
+            color: #fbbf24;
+            font-size: 11px;
+            margin-top: 5px;
+            animation: bounce 1s infinite;
+            display: none;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
         }
     </style>
 </head>
@@ -240,6 +339,14 @@
     <div class="status" id="status">Meminta Izin Kamera...</div>
     <div class="camera-info" id="cameraInfo"></div>
     <div class="mood-result" id="moodResult"></div>
+    
+    <!-- ✅ ERROR BOX - Lebih terlihat -->
+    <div class="error-box" id="errorBox">
+        <h4>❌ Error Detail - Gagal Menyimpan Rekomendasi</h4>
+        <div id="errorContent"></div>
+    </div>
+    <div class="scroll-hint" id="scrollHint">⬇️ Scroll ke bawah untuk lihat detail error</div>
+    
     <div class="target-badge">🎯 Target: FHD Camera</div>
 
     <div class="preview-container" id="previewContainer">
@@ -254,6 +361,8 @@
     <div class="button-row">
         <button id="captureBtn">📸 FOTO & DETEKSI</button>
         <button id="switchBtn" class="btn-secondary">🔄 Ganti Kamera</button>
+        <button id="forceContinueBtn" class="btn-danger" style="display:none;">⏭️ Lanjut Paksa</button>
+        <button id="retryBtn" class="btn-success" style="display:none;">🔁 Coba Lagi</button>
     </div>
 
     <div class="shortcut-hint">
@@ -269,23 +378,21 @@
         const moodResultEl = document.getElementById("moodResult");
         const captureBtn = document.getElementById("captureBtn");
         const switchBtn = document.getElementById("switchBtn");
+        const forceContinueBtn = document.getElementById("forceContinueBtn");
+        const retryBtn = document.getElementById("retryBtn");
         const httpsWarning = document.getElementById("httpsWarning");
         const cameraSelect = document.getElementById("cameraSelect");
         const cameraSelectContainer = document.getElementById("cameraSelectContainer");
         const previewContainer = document.getElementById("previewContainer");
         const previewImg = document.getElementById("previewImg");
         const previewInfo = document.getElementById("previewInfo");
+        const errorBox = document.getElementById("errorBox");
+        const errorContent = document.getElementById("errorContent");
+        const scrollHint = document.getElementById("scrollHint");
         
-        // ==========================================
-        // 🔧 KONFIGURASI USER & API
-        // ==========================================
         const USER_ID_PLACEHOLDER = "12cc0214-e266-4d1a-8c1d-b287e6c5a1f1";
-        
-        // ✅ ANDRE ML - untuk deteksi mood (HTTPS)
         const ANDRE_ML_ENDPOINT = "https://ai.moodbites.qzz.io/detect-mood";
-        
-        // ✅ BACKEND - untuk simpan rekomendasi (HTTP)
-        const BACKEND_BASE_URL = "http://103.185.52.14:8067";
+        const BACKEND_BASE_URL = "http://127.0.0.1:8000";
         const RECOMMEND_ENDPOINT_BASE = `${BACKEND_BASE_URL}/recommend-external`;
 
         const TARGET_CAMERA_KEYWORDS = ["1bcf", "28c4", "sunplus", "sonix", "fhd", "usb camera", "webcam", "pc camera"];
@@ -294,16 +401,62 @@
 
         let currentStream = null;
         let allCameras = [];
+        let lastDetectedMood = null;
 
-        // ==========================================
-        // 🔍 DETEKSI DEVICE TYPE
-        // ==========================================
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        console.log(`📱 Device: ${isMobile ? 'Mobile' : 'Desktop/Laptop'}`);
 
         // ==========================================
-        // 1. CEK HTTPS & INIT
+        // ✅ FUNGSI ERROR - Dengan auto-scroll
         // ==========================================
+        function showError(title, details) {
+            let html = `<h4>❌ ${title}</h4>`;
+            
+            for (const [label, value] of Object.entries(details)) {
+                const displayValue = typeof value === 'object' 
+                    ? JSON.stringify(value, null, 2) 
+                    : String(value);
+                
+                // Highlight URL dan error penting
+                let highlightedValue = displayValue;
+                if (label.toLowerCase().includes('url') || label.toLowerCase().includes('endpoint')) {
+                    highlightedValue = `<span class="error-highlight">${displayValue}</span>`;
+                }
+                
+                html += `
+                    <div class="error-section">
+                        <span class="error-label">${label}</span>
+                        <div class="error-value">${highlightedValue}</div>
+                    </div>
+                `;
+            }
+            
+            errorContent.innerHTML = html;
+            errorBox.style.display = "block";
+            
+            // Tampilkan hint scroll jika perlu
+            setTimeout(() => {
+                if (errorBox.scrollHeight > window.innerHeight * 0.4) {
+                    scrollHint.style.display = "block";
+                }
+            }, 100);
+            
+            // Auto-scroll ke error box
+            setTimeout(() => {
+                errorBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 300);
+            
+            retryBtn.style.display = "inline-block";
+            forceContinueBtn.style.display = "inline-block";
+        }
+
+        function clearError() {
+            errorBox.style.display = "none";
+            errorContent.innerHTML = "";
+            retryBtn.style.display = "none";
+            forceContinueBtn.style.display = "none";
+            scrollHint.style.display = "none";
+        }
+
         if (!window.isSecureContext) {
             httpsWarning.style.display = "block";
             statusEl.textContent = "⚠️ Butuh HTTPS! Kamera tidak akan jalan.";
@@ -314,36 +467,23 @@
             try {
                 const devices = await navigator.mediaDevices.enumerateDevices();
                 allCameras = devices.filter(d => d.kind === "videoinput");
-                console.log(`📹 Total kamera terdeteksi: ${allCameras.length}`);
                 return allCameras;
             } catch (err) {
-                console.error("Gagal enumerate:", err);
                 return [];
             }
         }
 
         function findTargetCamera(cameras) {
-            // Prioritas 1: Device yang pernah dipilih
             if (PREFERRED_DEVICE_ID) {
                 const saved = cameras.find(c => c.deviceId === PREFERRED_DEVICE_ID);
-                if (saved) {
-                    console.log("✅ Pakai kamera tersimpan:", saved.label);
-                    return saved;
-                }
+                if (saved) return saved;
             }
-
-            // Prioritas 2: Cocokkan dengan keyword target (USB webcam FHD)
             for (const cam of cameras) {
                 const label = (cam.label || "").toLowerCase();
                 for (const keyword of TARGET_CAMERA_KEYWORDS) {
-                    if (label.includes(keyword.toLowerCase())) {
-                        console.log("🎯 Kamera target terdeteksi:", cam.label);
-                        return cam;
-                    }
+                    if (label.includes(keyword.toLowerCase())) return cam;
                 }
             }
-
-            // Prioritas 3: Kamera depan (mobile) atau webcam built-in (laptop)
             if (isMobile) {
                 const front = cameras.find(c => {
                     const label = (c.label || "").toLowerCase();
@@ -351,15 +491,12 @@
                 });
                 if (front) return front;
             } else {
-                // Laptop: cari webcam built-in (biasanya ada kata "integrated" atau "built-in")
                 const builtin = cameras.find(c => {
                     const label = (c.label || "").toLowerCase();
                     return label.includes("integrated") || label.includes("built-in") || label.includes("facetime");
                 });
                 if (builtin) return builtin;
             }
-
-            // Fallback: kamera pertama
             return cameras[0] || null;
         }
 
@@ -376,13 +513,11 @@
                 currentStream = null;
             }
 
-            // Jika belum ada target, enumerate dulu
             if (!targetDeviceId) {
                 try {
-                    // Request awal untuk dapat label kamera
                     const tempConstraints = isMobile 
                         ? { video: { facingMode: "user" }, audio: false }
-                        : { video: true, audio: false }; // Laptop: tidak pakai facingMode
+                        : { video: true, audio: false };
                     
                     const tempStream = await navigator.mediaDevices.getUserMedia(tempConstraints);
                     tempStream.getTracks().forEach(t => t.stop());
@@ -396,47 +531,16 @@
                         populateCameraSelect(cameras, targetDeviceId);
                     }
                 } catch (err) {
-                    console.error("Gagal request awal:", err);
                     handleCameraError(err);
                     return;
                 }
             }
 
-            // Bangun constraints dengan fallback bertingkat
             const constraintsList = [
-                // Percobaan 1: Device spesifik + FHD
-                { 
-                    video: { 
-                        deviceId: { exact: targetDeviceId }, 
-                        width: { ideal: TARGET_RESOLUTION.width }, 
-                        height: { ideal: TARGET_RESOLUTION.height },
-                        frameRate: { ideal: 30 }
-                    }, 
-                    audio: false 
-                },
-                // Percobaan 2: Device spesifik + 720p
-                { 
-                    video: { 
-                        deviceId: { exact: targetDeviceId }, 
-                        width: { ideal: 1280 }, 
-                        height: { ideal: 720 } 
-                    }, 
-                    audio: false 
-                },
-                // Percobaan 3: Device spesifik saja
-                { 
-                    video: { deviceId: { exact: targetDeviceId } }, 
-                    audio: false 
-                },
-                // Percobaan 4: FHD tanpa device spesifik
-                { 
-                    video: { 
-                        width: { ideal: TARGET_RESOLUTION.width }, 
-                        height: { ideal: TARGET_RESOLUTION.height } 
-                    }, 
-                    audio: false 
-                },
-                // Percobaan 5: Fallback total
+                { video: { deviceId: { exact: targetDeviceId }, width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } }, audio: false },
+                { video: { deviceId: { exact: targetDeviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
+                { video: { deviceId: { exact: targetDeviceId } }, audio: false },
+                { video: { width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false },
                 { video: true, audio: false }
             ];
 
@@ -446,11 +550,9 @@
             for (const constraints of constraintsList) {
                 try {
                     stream = await navigator.mediaDevices.getUserMedia(constraints);
-                    console.log("✅ Kamera berhasil diakses dengan constraints:", constraints);
                     break;
                 } catch (err) {
                     lastError = err;
-                    console.warn("⚠️ Constraint gagal:", err.name, constraints);
                     continue;
                 }
             }
@@ -466,49 +568,33 @@
             const track = stream.getVideoTracks()[0];
             const settings = track.getSettings();
             
-            cameraInfoEl.innerHTML = `
-                📷 <b>${track.label || "Unknown Camera"}</b><br>
-                Resolusi: ${settings.width}×${settings.height} @ ${settings.frameRate?.toFixed(1) || "?"}fps
-            `;
-            
+            cameraInfoEl.innerHTML = `📷 <b>${track.label || "Unknown Camera"}</b><br>Resolusi: ${settings.width}×${settings.height} @ ${settings.frameRate?.toFixed(1) || "?"}fps`;
             statusEl.textContent = "✅ Kamera AKTIF";
             statusEl.style.color = "#22c55e";
 
-            // Play video
             videoElement.addEventListener("loadedmetadata", () => {
                 videoElement.play()
                     .then(() => {
                         captureBtn.style.display = "inline-block";
                         switchBtn.style.display = "inline-block";
                     })
-                    .catch(err => {
-                        console.error("Play gagal:", err);
+                    .catch(() => {
                         statusEl.textContent = "👆 Tap/klik untuk aktifkan";
                     });
             }, { once: true });
 
-            // Fallback play
             setTimeout(() => {
-                if (videoElement.paused) {
-                    videoElement.play().catch(() => {});
-                }
+                if (videoElement.paused) videoElement.play().catch(() => {});
             }, 500);
         }
 
         function handleCameraError(err) {
             let errorMsg = "❌ ";
-            
-            if (err?.name === "NotFoundError") {
-                errorMsg += "Kamera tidak ditemukan. Colokkan USB webcam atau cek koneksi.";
-            } else if (err?.name === "NotAllowedError") {
-                errorMsg += "Izin ditolak. Buka Settings browser → Camera → Allow.";
-            } else if (err?.name === "NotReadableError") {
-                errorMsg += "Kamera sedang dipakai app lain. Tutup Zoom/Meet/Skype.";
-            } else if (err?.name === "OverconstrainedError") {
-                errorMsg += "Kamera tidak support resolusi yang diminta.";
-            } else {
-                errorMsg += `Error: ${err?.message || "Unknown"}`;
-            }
+            if (err?.name === "NotFoundError") errorMsg += "Kamera tidak ditemukan.";
+            else if (err?.name === "NotAllowedError") errorMsg += "Izin ditolak.";
+            else if (err?.name === "NotReadableError") errorMsg += "Kamera sedang dipakai app lain.";
+            else if (err?.name === "OverconstrainedError") errorMsg += "Resolusi tidak didukung.";
+            else errorMsg += `Error: ${err?.message || "Unknown"}`;
             
             statusEl.textContent = errorMsg;
             statusEl.style.color = "#ef4444";
@@ -516,7 +602,6 @@
 
         function populateCameraSelect(cameras, selectedId) {
             if (cameras.length <= 1) return;
-            
             cameraSelect.innerHTML = "";
             cameras.forEach(cam => {
                 const opt = document.createElement("option");
@@ -533,7 +618,6 @@
 
         cameraSelect.addEventListener("change", async (e) => {
             localStorage.setItem("preferred_camera_id", e.target.value);
-            statusEl.textContent = "🔄 Mengganti kamera...";
             await requestCamera(e.target.value);
         });
 
@@ -542,24 +626,17 @@
                 cameraSelectContainer.style.display === "none" ? "block" : "none";
         });
 
-        // ==========================================
-        // 🖱️ INTERACTION HANDLERS
-        // ==========================================
-        // Tap-to-start fix for iOS
         let userInteracted = false;
         function handleFirstInteraction() {
             if (userInteracted) return;
             userInteracted = true;
-            if (videoElement.paused && currentStream) {
-                videoElement.play().catch(() => {});
-            }
+            if (videoElement.paused && currentStream) videoElement.play().catch(() => {});
             document.removeEventListener("touchstart", handleFirstInteraction);
             document.removeEventListener("click", handleFirstInteraction);
         }
         document.addEventListener("touchstart", handleFirstInteraction, { passive: true });
         document.addEventListener("click", handleFirstInteraction);
 
-        // Keyboard shortcut untuk laptop (SPACE untuk capture)
         document.addEventListener("keydown", (e) => {
             if (e.code === "Space" && !captureBtn.disabled && captureBtn.style.display !== "none") {
                 e.preventDefault();
@@ -567,9 +644,22 @@
             }
         });
 
-        // ==========================================
-        // 2. CAPTURE & KIRIM KE ANDRE ML
-        // ==========================================
+        retryBtn.addEventListener("click", () => {
+            clearError();
+            if (lastDetectedMood) {
+                statusEl.textContent = `🔁 Mencoba ulang kirim mood: ${lastDetectedMood}`;
+                sendRecommendation(lastDetectedMood, USER_ID_PLACEHOLDER);
+            } else {
+                capture();
+            }
+        });
+
+        forceContinueBtn.addEventListener("click", () => {
+            if (confirm("Lanjut ke halaman order tanpa menyimpan rekomendasi?")) {
+                window.location.href = "index.html";
+            }
+        });
+
         captureBtn.addEventListener("click", capture);
 
         function capture() {
@@ -578,12 +668,13 @@
                 return;
             }
 
+            clearError();
+
             const canvas = document.getElementById("canvas");
             const ctx = canvas.getContext("2d");
             canvas.width = videoElement.videoWidth || 1920;
             canvas.height = videoElement.videoHeight || 1080;
             
-            // Mirror flip
             ctx.translate(canvas.width, 0);
             ctx.scale(-1, 1);
             ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
@@ -607,9 +698,6 @@
             }, "image/jpeg", 0.85);
         }
 
-        // ==========================================
-        // 3. KIRIM KE ANDRE ML (DETEKSI MOOD)
-        // ==========================================
         async function sendToAndreML(jpegBlob) {
             statusEl.innerHTML = '<span class="loading"></span>Menganalisis mood di Andre ML...';
             const formData = new FormData();
@@ -617,77 +705,157 @@
             formData.append("user_id", USER_ID_PLACEHOLDER);
 
             try {
-                console.log(`📤 Mengirim ke Andre ML: ${ANDRE_ML_ENDPOINT}`);
+                const startTime = Date.now();
                 const response = await fetch(ANDRE_ML_ENDPOINT, { 
                     method: "POST", 
                     body: formData 
                 });
+                const elapsed = Date.now() - startTime;
                 
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                console.log(`⏱️ Andre ML response time: ${elapsed}ms`);
+                console.log(`📡 Andre ML status: ${response.status} ${response.statusText}`);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    showError("Gagal Deteksi Mood (Andre ML)", {
+                        "Endpoint": ANDRE_ML_ENDPOINT,
+                        "HTTP Status": `${response.status} ${response.statusText}`,
+                        "Response Time": `${elapsed}ms`,
+                        "Response Body": errorText || "(kosong)"
+                    });
+                    statusEl.textContent = "❌ Gagal deteksi mood.";
+                    statusEl.style.color = "#ef4444";
+                    captureBtn.disabled = false;
+                    return;
+                }
                 
                 const data = await response.json();
                 console.log("📊 Response Andre ML:", data);
 
                 const mood = extractMood(data);
+                lastDetectedMood = mood;
                 moodResultEl.textContent = `😊 Mood: ${mood}`;
                 moodResultEl.style.display = "block";
                 
-                // ==========================================
-                // 4. KIRIM KE BACKEND (SIMPAN REKOMENDASI)
-                // ==========================================
                 await sendRecommendation(mood, USER_ID_PLACEHOLDER);
 
             } catch (err) {
                 console.error("❌ Error Andre ML:", err);
-                statusEl.textContent = "❌ Gagal deteksi mood. Coba lagi.";
+                showError("Error Koneksi ke Andre ML", {
+                    "Endpoint": ANDRE_ML_ENDPOINT,
+                    "Error Type": err.name || "Unknown",
+                    "Error Message": err.message,
+                    "Kemungkinan Penyebab": "CORS, network error, atau server down"
+                });
+                statusEl.textContent = "❌ Gagal deteksi mood.";
                 statusEl.style.color = "#ef4444";
                 captureBtn.disabled = false;
             }
         }
 
-        // ==========================================
-        // 5. KIRIM KE BACKEND & REDIRECT
-        // ==========================================
         async function sendRecommendation(mood, user_id) {
+            const safeMood = encodeURIComponent(mood.trim().toLowerCase());
+            const safeUserId = encodeURIComponent(user_id);
+            const targetUrl = `${RECOMMEND_ENDPOINT_BASE}/${safeMood}/${safeUserId}`;
+
+            console.log(`🚀 Mengirim rekomendasi ke: ${targetUrl}`);
+            statusEl.innerHTML = '<span class="loading"></span>Menyimpan rekomendasi...';
+
+            const startTime = Date.now();
+            let lastRes = null;
+            let lastMethod = null;
+            let lastErrorText = "";
+            let lastErrorObj = null;
+
             try {
-                const safeMood = encodeURIComponent(mood.trim().toLowerCase());
-                const safeUserId = encodeURIComponent(user_id);
-                const targetUrl = `${RECOMMEND_ENDPOINT_BASE}/${safeMood}/${safeUserId}`;
-
-                console.log(`🚀 Mengirim rekomendasi ke: ${targetUrl}`);
-                statusEl.innerHTML = '<span class="loading"></span>Menyimpan rekomendasi...';
-
-                // Coba POST dulu
-                let res = await fetch(targetUrl, {
+                lastMethod = "POST";
+                lastRes = await fetch(targetUrl, {
                     method: "POST", 
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ user_id: user_id, mood: mood })
                 });
-
-                // Fallback ke GET jika POST gagal
-                if (!res.ok) {
-                    console.warn("⚠️ POST gagal, coba GET...");
-                    res = await fetch(targetUrl, { method: "GET" });
-                }
-
-                if (!res.ok) throw new Error(`Gagal menyimpan: HTTP ${res.status}`);
-
-                console.log("✅ Rekomendasi berhasil disimpan!");
-                statusEl.textContent = "✅ Berhasil! Mengalihkan ke halaman order...";
-                statusEl.style.color = "#22c55e";
-
-                setTimeout(() => {
-                    window.location.href = "index.html";
-                }, 1500);
-
-            } catch (err) {
-                console.error("❌ Gagal mengirim rekomendasi:", err);
-                statusEl.textContent = "⚠️ Gagal simpan, tapi tetap mengalihkan...";
+                lastErrorText = await lastRes.text();
                 
-                setTimeout(() => {
-                    window.location.href = "index.html";
-                }, 2000);
+                console.log(`📡 POST response: ${lastRes.status} ${lastRes.statusText}`);
+                console.log(`📄 POST body:`, lastErrorText);
+                
+                if (lastRes.ok) {
+                    const elapsed = Date.now() - startTime;
+                    console.log(`✅ Rekomendasi berhasil disimpan dalam ${elapsed}ms`);
+                    statusEl.textContent = `✅ Berhasil! Mengalihkan ke order...`;
+                    statusEl.style.color = "#22c55e";
+                    
+                    setTimeout(() => {
+                        window.location.href = "index.html";
+                    }, 1500);
+                    return;
+                }
+            } catch (err) {
+                console.warn("⚠️ POST error:", err);
+                lastErrorObj = err;
+                lastErrorText = err.message;
             }
+
+            try {
+                lastMethod = "GET (fallback)";
+                lastRes = await fetch(targetUrl, { method: "GET" });
+                lastErrorText = await lastRes.text();
+                
+                console.log(`📡 GET response: ${lastRes.status} ${lastRes.statusText}`);
+                console.log(`📄 GET body:`, lastErrorText);
+                
+                if (lastRes.ok) {
+                    const elapsed = Date.now() - startTime;
+                    console.log(`✅ Rekomendasi berhasil disimpan (GET) dalam ${elapsed}ms`);
+                    statusEl.textContent = `✅ Berhasil! Mengalihkan ke order...`;
+                    statusEl.style.color = "#22c55e";
+                    
+                    setTimeout(() => {
+                        window.location.href = "index.html";
+                    }, 1500);
+                    return;
+                }
+            } catch (err) {
+                console.warn("⚠️ GET error:", err);
+                lastErrorObj = err;
+                lastErrorText = err.message;
+            }
+
+            console.error("❌ Gagal menyimpan rekomendasi");
+            
+            const errorDetails = {
+                "🎯 Target URL": targetUrl,
+                "😊 Mood Terdeteksi": mood,
+                "👤 User ID": user_id,
+                "📡 Method Terakhir": lastMethod,
+                "🔢 HTTP Status": lastRes ? `${lastRes.status} ${lastRes.statusText}` : "N/A",
+                "📄 Response Body": lastErrorText || "(kosong)",
+                "🌐 Backend URL": BACKEND_BASE_URL,
+            };
+
+            if (lastErrorObj) {
+                errorDetails["⚠️ Error Type"] = lastErrorObj.name || "Unknown";
+                errorDetails["💬 Error Message"] = lastErrorObj.message;
+                
+                if (lastErrorObj.message?.includes("Failed to fetch") || lastErrorObj.message?.includes("NetworkError")) {
+                    errorDetails["🔍 Kemungkinan Penyebab"] = 
+                        "1. Backend tidak reachable dari browser\n" +
+                        "2. CORS tidak diizinkan (backend HTTP, halaman HTTPS) ← PALING MUNGKIN!\n" +
+                        "3. Firewall memblokir port 8067\n" +
+                        "4. Backend sedang down\n\n" +
+                        "💡 Solusi: Setup HTTPS di backend atau pakai Cloudflare Tunnel";
+                } else if (lastRes?.status === 0) {
+                    errorDetails["🔍 Kemungkinan Penyebab"] = 
+                        "CORS error - backend tidak mengirim header Access-Control-Allow-Origin";
+                }
+            }
+
+            showError("Gagal Menyimpan Rekomendasi", errorDetails);
+            
+            statusEl.textContent = "❌ Gagal simpan. Lihat detail error di bawah.";
+            statusEl.style.color = "#ef4444";
+            
+            captureBtn.disabled = false;
         }
 
         function extractMood(data) {
@@ -702,9 +870,6 @@
             return "neutral";
         }
 
-        // ==========================================
-        // 6. START
-        // ==========================================
         window.addEventListener("load", () => requestCamera());
         window.addEventListener("beforeunload", () => {
             if (currentStream) currentStream.getTracks().forEach(t => t.stop());
