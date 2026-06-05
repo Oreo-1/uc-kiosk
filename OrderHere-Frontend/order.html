@@ -156,7 +156,7 @@ function formatRp(amount) {
 function getImageUrl(imagePath) {
   if (!imagePath) return null;
   if (imagePath.startsWith('http')) return imagePath;
-  return 'http://103.185.52.14/storage/' + imagePath;
+  return 'https://backend.orderhere.dpdns.org/storage/' + imagePath;
 }
 
 // ✅ FITUR BARU: AUTO-DETECT KATEGORI BERDASARKAN NAMA MAKANAN
@@ -194,7 +194,7 @@ function getEmojiByType(type) {
 // ── API FETCH ──────────────────────────────
 async function apiFetch(endpoint) {
   try {
-    const response = await fetch('http://103.185.52.14/api' + endpoint);
+    const response = await fetch('https://backend.orderhere.dpdns.org/api' + endpoint);
     const data = await response.json();
     if (!data.success) throw new Error(data.message || 'API error');
     return data;
