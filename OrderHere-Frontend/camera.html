@@ -15,24 +15,12 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
             background: #ffffff; 
             display: flex; 
-            /* Default for mobile: stack vertically */
             flex-direction: column;
             align-items: center; 
             justify-content: center; 
             min-height: 100vh; 
-            min-height: -webkit-fill-available;
             padding: 20px;
-            padding-top: env(safe-area-inset-top);
-            padding-bottom: env(safe-area-inset-bottom);
             overflow: hidden;
-        }
-
-        /* Desktop and Tablet: Side-by-Side layout */
-        @media (min-width: 768px) {
-            body {
-                flex-direction: row;
-                gap: 50px; /* Fixed distance between video and button */
-            }
         }
 
         .video-container { 
@@ -42,32 +30,25 @@
             border-radius: 24px; 
             overflow: hidden; 
             border: 4px solid #f97316;
-            box-shadow: 
-                0 0 30px rgba(249, 115, 22, 0.4),
-                0 0 80px rgba(249, 115, 22, 0.2);
+            box-shadow: 0 0 30px rgba(249, 115, 22, 0.4);
             background: #f3f4f6;
             position: relative;
-            animation: glowPulse 3s ease-in-out infinite;
-            /* Ensure it fits on short tablet screens */
-            max-height: 70vh;
         }
 
-        @keyframes glowPulse {
-            0%, 100% { transform: scale(1); box-shadow: 0 0 30px rgba(249, 115, 22, 0.4); }
-            50% { transform: scale(1.005); box-shadow: 0 0 45px rgba(249, 115, 22, 0.6); }
-        }
+        video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 
-        video { 
-            width: 100%; 
-            height: 100%; 
-            object-fit: cover; 
-            transform: scaleX(-1);
+        /* Tampilan Hasil Mood */
+        #moodResult {
+            margin-top: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            color: #ea580c;
+            text-transform: uppercase;
+            min-height: 40px;
         }
 
         .capture-btn { 
-            /* Spacing for mobile (when stacked) */
-            margin-top: 30px;
-            
+            margin-top: 20px;
             padding: 20px 50px; 
             background: linear-gradient(135deg, #f97316, #ea580c); 
             border: none; 
@@ -78,31 +59,10 @@
             cursor: pointer; 
             box-shadow: 0 10px 30px rgba(249, 115, 22, 0.4);
             transition: all 0.2s ease;
-            white-space: nowrap;
-            flex-shrink: 0;
         }
 
-        /* Adjust button for side-by-side mode */
-        @media (min-width: 768px) {
-            .capture-btn {
-                margin-top: 0; /* Remove top margin when on the side */
-                padding: 25px 60px;
-                font-size: 22px;
-            }
-        }
-
-        .capture-btn:active { 
-            transform: scale(0.92); 
-            box-shadow: 0 5px 15px rgba(249, 115, 22, 0.4);
-        }
-
-        .capture-btn:disabled { 
-            background: #d1d5db; 
-            cursor: not-allowed; 
-            opacity: 0.7;
-            box-shadow: none;
-            transform: none;
-        }
+        .capture-btn:active { transform: scale(0.92); }
+        .capture-btn:disabled { background: #d1d5db; opacity: 0.7; }
 
         canvas { display: none; }
     </style>
@@ -110,8 +70,11 @@
 <body>
 
     <div class="video-container">
-        <video id="video" autoplay playsinline muted webkit-playsinline></video>
+        <video id="video" autoplay playsinline muted></video>
     </div>
+
+    <!-- Area untuk mencetak hasil mood -->
+    <div id="moodResult"></div>
 
     <button class="capture-btn" id="captureBtn">Capture Mood</button>
 
@@ -120,13 +83,11 @@
     <script>
         const videoElement = document.getElementById("video");
         const captureBtn = document.getElementById("captureBtn");
+        const moodResultDiv = document.getElementById("moodResult");
+
         const USER_ID_PLACEHOLDER = "12cc0214-e266-4d1a-8c1d-b287e6c5a1f1";
         const ANDRE_ML_ENDPOINT = "https://ai.moodbites.qzz.io/detect-mood";
-        const BACKEND_BASE_URL = "https://api-ml.aryo.fyi";
-        const RECOMMEND_ENDPOINT_BASE = `${BACKEND_BASE_URL}/recommend-external`;
         const TARGET_CAMERA_KEYWORDS = ["1bcf", "28c4", "sunplus", "sonix", "fhd", "usb camera", "webcam", "pc camera"];
-        const PREFERRED_DEVICE_ID = localStorage.getItem("preferred_camera_id") || null;
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
         let currentStream = null;
 
@@ -138,58 +99,38 @@
         }
 
         function findTargetCamera(cameras) {
-            if (PREFERRED_DEVICE_ID) {
-                const saved = cameras.find(c => c.deviceId === PREFERRED_DEVICE_ID);
-                if (saved) return saved;
-            }
             for (const cam of cameras) {
                 const label = (cam.label || "").toLowerCase();
                 for (const keyword of TARGET_CAMERA_KEYWORDS) {
                     if (label.includes(keyword.toLowerCase())) return cam;
                 }
             }
-            if (isMobile) {
-                const front = cameras.find(c => (c.label || "").toLowerCase().includes("front"));
-                if (front) return front;
-            }
             return cameras[0] || null;
         }
 
-        async function requestCamera(targetDeviceId = null) {
+        async function requestCamera() {
             if (!navigator.mediaDevices?.getUserMedia) return;
-            if (currentStream) currentStream.getTracks().forEach(t => t.stop());
-
-            if (!targetDeviceId) {
-                try {
-                    const temp = await navigator.mediaDevices.getUserMedia({ video: true });
-                    temp.getTracks().forEach(t => t.stop());
-                    const cameras = await enumerateCameras();
-                    const target = findTargetCamera(cameras);
-                    if (target) targetDeviceId = target.deviceId;
-                } catch (e) { console.error(e); }
-            }
-
-            const constraints = { 
-                video: targetDeviceId ? { deviceId: { exact: targetDeviceId } } : { facingMode: "user" },
-                audio: false 
-            };
-
             try {
+                const cameras = await enumerateCameras();
+                const target = findTargetCamera(cameras);
+                const constraints = { 
+                    video: target ? { deviceId: { exact: target.deviceId } } : { facingMode: "user" },
+                    audio: false 
+                };
                 currentStream = await navigator.mediaDevices.getUserMedia(constraints);
                 videoElement.srcObject = currentStream;
-                videoElement.play();
             } catch (e) { console.error(e); }
         }
 
         function capture() {
             if (!currentStream) return;
             captureBtn.disabled = true;
-            captureBtn.innerText = "Processing...";
+            captureBtn.innerText = "Analyzing...";
+            moodResultDiv.innerText = "Detecting...";
 
             const canvas = document.getElementById("canvas");
             const ctx = canvas.getContext("2d");
-            
-            canvas.width = videoElement.videoWidth / 2; // Reduced size for speed
+            canvas.width = videoElement.videoWidth / 2; 
             canvas.height = videoElement.videoHeight / 2;
             
             ctx.translate(canvas.width, 0);
@@ -197,12 +138,12 @@
             ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
 
             canvas.toBlob((blob) => {
-                if (blob) sendToAndreML(blob);
+                if (blob) sendToML(blob);
                 else captureBtn.disabled = false;
             }, "image/jpeg", 0.8);
         }
 
-        async function sendToAndreML(jpegBlob) {
+        async function sendToML(jpegBlob) {
             const formData = new FormData();
             formData.append("image", jpegBlob, "mood.jpg");
             formData.append("user_id", USER_ID_PLACEHOLDER);
@@ -210,27 +151,32 @@
             try {
                 const response = await fetch(ANDRE_ML_ENDPOINT, { method: "POST", body: formData });
                 const data = await response.json();
-                const mood = data.mood || data.result || "neutral";
-                await sendRecommendation(mood, USER_ID_PLACEHOLDER);
-            } catch {
-                captureBtn.disabled = false;
-                captureBtn.innerText = "Capture Mood";
-            }
-        }
+                
+                // Ambil Mood dari API
+                const mood = (data.mood || data.result || "neutral").toLowerCase();
+                
+                // 1. Simpan ke LocalStorage
+                localStorage.setItem("mood", mood);
 
-        async function sendRecommendation(mood, user_id) {
-            const url = `${RECOMMEND_ENDPOINT_BASE}/${encodeURIComponent(mood.toLowerCase())}/${encodeURIComponent(user_id)}`;
-            try {
-                await fetch(url, { method: "POST" });
-                window.location.href = "index.html";
-            } catch {
+                // 2. Cetak ke HTML (Tampilkan ke User)
+                moodResultDiv.innerText = "Mood: " + mood;
+
+
+                // 4. Redirect ke order.html setelah 1.5 detik agar user sempat melihat hasilnya
+                setTimeout(() => {
+                    window.location.href = "order.html";
+                }, 1500);
+
+            } catch (error) {
+                console.error(error);
+                moodResultDiv.innerText = "Error Detecting Mood";
                 captureBtn.disabled = false;
                 captureBtn.innerText = "Capture Mood";
             }
         }
 
         captureBtn.addEventListener("click", capture);
-        window.addEventListener("load", () => requestCamera());
+        window.addEventListener("load", requestCamera);
     </script>
 </body>
 </html>
