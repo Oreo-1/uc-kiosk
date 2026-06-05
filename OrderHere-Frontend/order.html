@@ -43,12 +43,27 @@
         overflow: hidden;
       }
 
+      /* LOGIK HIDE ON SCROLL CSS */
+      .vendor-row, .vendor-header {
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden;
+        flex-shrink: 0;
+      }
+
+      .header-collapsed {
+        max-height: 0 !important;
+        margin-bottom: 0 !important;
+        padding-top: 0 !important;
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(-20px);
+      }
+
       .vendor-row {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 16px;
         margin-bottom: 28px;
-        flex-shrink: 0;
       }
 
       .vendor-card {
@@ -99,7 +114,6 @@
       }
 
       .vendor-header {
-        flex-shrink: 0;
         margin-bottom: 16px;
       }
       .vendor-title {
@@ -109,7 +123,6 @@
         margin-bottom: 14px;
       }
 
-      /* STYLE UNTUK TAB FILTER AGAR BISA SCROLL SAMPING */
       .filter-row {
         display: flex;
         gap: 10px;
@@ -724,14 +737,14 @@
           <!-- Vendor akan di-render otomatis oleh JavaScript -->
         </div>
 
-        <div class="vendor-header">
+        <div class="vendor-header" id="header-nav">
           <h2 class="vendor-title" id="vendor-title">Loading...</h2>
           <div class="filter-row" id="filter-row">
             <!-- Filter chips akan di-render otomatis -->
           </div>
         </div>
 
-        <div class="menu-grid-wrapper">
+        <div class="menu-grid-wrapper" id="scroll-area">
           <div class="menu-grid" id="menu-grid">
             <!-- Menu dirender otomatis oleh JavaScript -->
           </div>
@@ -838,9 +851,9 @@
       let selectedAddons = [];
       let recommendationRaw = null;
 
-      // ✅ PLACEHOLDER ML
+      // ✅ MENGAMBIL MOOD ASLI DARI SCAN SEBELUMNYA
       const MOOD_PLACEHOLDER = localStorage.getItem("mood") || "neutral";
-      const USER_ID_PLACEHOLDER = localStorage.getItem("user_id") || "12cc0214-e266-4d1a-8c1d-b287e6c5a1f1";
+      const USER_ID_PLACEHOLDER = "12cc0214-e266-4d1a-8c1d-b287e6c5a1f1";
 
       // ✅ LOAD CART & DINING TYPE
       let cart = getCart();
@@ -1036,9 +1049,10 @@
       }
 
       function confirmAddToOrder() {
+        const addonAmt = selectedAddons.reduce((s, a) => s + a.price, 0);
         cart.push({
           id: Date.now(), food_id: sheetData.id, name: sheetData.name,
-          basePrice: sheetData.basePrice, addonAmt: selectedAddons.reduce((s,a) => s+a.price, 0),
+          basePrice: sheetData.basePrice, addonAmt: addonAmt,
           qty: sheetQty, est: parseInt(sheetData.est), emoji: sheetData.emoji,
           spice: selectedSpice, addons: selectedAddons.map(a => a.label),
           catatan: document.getElementById("sheet-catatan").value,
@@ -1067,7 +1081,6 @@
           total += (item.basePrice + item.addonAmt) * item.qty;
           maxEst = Math.max(maxEst, item.est);
           count += item.qty;
-          // FIX ERROR: Tambahkan fallback [] untuk addons
           const noteText = [item.spice, ...(item.addons || []), item.catatan].filter(Boolean).join(" · ");
           const div = document.createElement("div");
           div.className = "cart-item";
@@ -1093,9 +1106,30 @@
         window.location.href = "review-order.html";
       }
 
+      // --- SCROLL TO HIDE LOGIC ---
       document.addEventListener("DOMContentLoaded", () => {
         loadData();
         document.getElementById("order-type-badge").textContent = getDiningType();
+
+        const scrollArea = document.getElementById("scroll-area");
+        const vendorRow = document.getElementById("vendor-container");
+        const headerNav = document.getElementById("header-nav");
+        let lastScroll = 0;
+
+        scrollArea.addEventListener("scroll", () => {
+          const currentScroll = scrollArea.scrollTop;
+
+          if (currentScroll > lastScroll && currentScroll > 80) {
+            // Scrolling down
+            vendorRow.classList.add("header-collapsed");
+            headerNav.classList.add("header-collapsed");
+          } else if (currentScroll < lastScroll) {
+            // Scrolling up
+            vendorRow.classList.remove("header-collapsed");
+            headerNav.classList.remove("header-collapsed");
+          }
+          lastScroll = currentScroll;
+        });
       });
     </script>
   </body>
