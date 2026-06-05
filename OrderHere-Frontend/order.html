@@ -109,10 +109,13 @@
         margin-bottom: 14px;
       }
 
+      /* STYLE UNTUK TAB FILTER AGAR BISA SCROLL SAMPING */
       .filter-row {
         display: flex;
         gap: 10px;
-        flex-wrap: wrap;
+        overflow-x: auto;
+        white-space: nowrap;
+        padding-bottom: 8px;
       }
       .filter-tag {
         padding: 6px 18px;
@@ -124,6 +127,8 @@
         cursor: pointer;
         transition: all 0.15s;
         background: #fff;
+        flex-shrink: 0;
+        text-transform: capitalize;
       }
       .filter-tag:hover {
         border-color: #f97316;
@@ -715,32 +720,14 @@
   <body>
     <div class="page">
       <div class="main">
-        <div class="vendor-row">
+        <div class="vendor-row" id="vendor-container">
           <!-- Vendor akan di-render otomatis oleh JavaScript -->
         </div>
 
         <div class="vendor-header">
           <h2 class="vendor-title" id="vendor-title">Loading...</h2>
-          <div class="filter-row">
-            <button class="filter-tag active" onclick="setFilter(this, 'all')">
-              Semua
-            </button>
-            <button class="filter-tag" onclick="setFilter(this, 'makanan')">
-              Makanan
-            </button>
-            <button class="filter-tag" onclick="setFilter(this, 'minuman')">
-              Minuman
-            </button>
-            <button class="filter-tag" onclick="setFilter(this, 'snack')">
-              Snack
-            </button>
-            <button
-              id="rekomendasi-btn"
-              class="filter-tag"
-              onclick="setFilter(this, 'paket')"
-            >
-              Rekomendasi
-            </button>
+          <div class="filter-row" id="filter-row">
+            <!-- Filter chips akan di-render otomatis -->
           </div>
         </div>
 
@@ -852,33 +839,26 @@
       let recommendationRaw = null;
 
       // ✅ PLACEHOLDER ML
-      const MOOD_PLACEHOLDER = "sad";
+      const MOOD_PLACEHOLDER = localStorage.getItem("mood") || "neutral";
       const USER_ID_PLACEHOLDER = "12cc0214-e266-4d1a-8c1d-b287e6c5a1f1";
 
-      // ✅ LOAD CART & DINING TYPE DARI LOCALSTORAGE
+      // ✅ LOAD CART & DINING TYPE
       let cart = getCart();
       const diningType = getDiningType();
 
       // ── FETCH FOODS & VENDORS ──────────────────────
       async function loadData() {
         try {
-          // ✅ UBAH MENJADI per_page=500 AGAR SEMUA 212 DATA TERAMBIL
           const res = await apiFetch("/foods?per_page=500");
           allFoods = res.data;
 
-          // 2. Tarik Data Rekomendasi dari API ML
           try {
             const mlUrl = `https://api-ml.aryo.fyi/recommend-external/${MOOD_PLACEHOLDER}/${USER_ID_PLACEHOLDER}`;
             const recRes = await fetch(mlUrl);
             const recJson = await recRes.json();
-            if (recJson && recJson.vendors) {
-              recommendationRaw = recJson.vendors;
-            }
-          } catch (err) {
-            console.error("Failed to fetch ML recommendations:", err);
-          }
+            if (recJson && recJson.vendors) recommendationRaw = recJson.vendors;
+          } catch (err) { console.error("ML Error:", err); }
 
-          // 3. EKSTRAK VENDOR OTOMATIS DARI DATA MAKANAN
           const vendorMap = new Map();
           allFoods.forEach((food) => {
             if (food.vendor && !vendorMap.has(food.vendor.id)) {
@@ -887,177 +867,107 @@
           });
           allVendors = Array.from(vendorMap.values());
 
-          // 4. Render Vendor & Makanan
           renderVendors(allVendors);
           if (allVendors.length > 0) {
-            currentVendorId = allVendors[0].id; // Set default vendor
-            selectVendor(currentVendorId);
-          } else {
-            document.getElementById("menu-grid").innerHTML =
-              "<p>Tidak ada vendor.</p>";
+            selectVendor(allVendors[0].id);
           }
-        } catch (err) {
-          console.error("Failed to load data:", err);
-          document.getElementById("menu-grid").innerHTML =
-            '<p style="color:red">Gagal load data</p>';
-        }
+          renderCart();
+        } catch (err) { console.error("Load Data Fail:", err); }
       }
 
-      // ── RENDER VENDORS (DYNAMIC) ─────────────────
       function renderVendors(vendors) {
-        const container = document.querySelector(".vendor-row");
-        container.innerHTML = "";
-
-        vendors.forEach((vendor, index) => {
-          const div = document.createElement("div");
-          div.className = `vendor-card ${index === 0 ? "active" : ""}`;
-          div.id = `vendor-${vendor.id}`;
-          div.onclick = () => selectVendor(vendor.id);
-
-          div.innerHTML = `
-        <div class="vendor-logo">
-          <span style="font-size:24px">🏪</span> 
-        </div>
-        <span class="vendor-name">${vendor.name}</span>
-      `;
-          container.appendChild(div);
-        });
+        const container = document.getElementById("vendor-container");
+        container.innerHTML = vendors.map(v => `
+          <div class="vendor-card" id="vendor-${v.id}" onclick="selectVendor(${v.id})">
+            <div class="vendor-logo">🏪</div>
+            <span class="vendor-name">${v.name}</span>
+          </div>`).join("");
       }
 
-      // ── SELECT VENDOR & FILTER ───────────────────
       function selectVendor(vendorId) {
         currentVendorId = vendorId;
-
-        document
-          .querySelectorAll(".vendor-card")
-          .forEach((c) => c.classList.remove("active"));
+        document.querySelectorAll(".vendor-card").forEach(c => c.classList.remove("active"));
         const activeCard = document.getElementById(`vendor-${vendorId}`);
         if (activeCard) activeCard.classList.add("active");
 
-        const vendor = allVendors.find((v) => v.id === vendorId);
-        if (vendor)
-          document.getElementById("vendor-title").textContent = vendor.name;
+        const vendor = allVendors.find(v => v.id === vendorId);
+        if (vendor) document.getElementById("vendor-title").textContent = vendor.name;
 
-        // Default: tampilkan 'Semua' saat ganti vendor
-        setFilter(document.querySelector(".filter-tag"), "all");
+        // Render Chip Filter Dinamis
+        renderFilterTabs();
+
+        // Default: filter 'all'
+        const firstTab = document.querySelector(".filter-tag");
+        if (firstTab) setFilter(firstTab, "all");
       }
 
-      // ✅ HELPER PEMBERSIH NAMA SANGAT AGRESIF (Hapus spasi dan simbol)
+      function renderFilterTabs() {
+        const filterRow = document.getElementById("filter-row");
+        const vendorFoods = allFoods.filter(f => f.vendor_id == currentVendorId);
+        
+        // Ambil kategori (type) unik dari database
+        const categories = [...new Set(vendorFoods.map(f => f.type))].filter(Boolean);
+
+        let html = `<button class="filter-tag active" onclick="setFilter(this, 'all')">Semua</button>`;
+        
+        if (localStorage.getItem("moodbites") !== "NO_MOODBITES") {
+          html += `<button id="rekomendasi-btn" class="filter-tag" onclick="setFilter(this, 'paket')">Rekomendasi</button>`;
+        }
+
+        categories.forEach(cat => {
+          html += `<button class="filter-tag" onclick="setFilter(this, '${cat}')">${cat}</button>`;
+        });
+
+        filterRow.innerHTML = html;
+      }
+
       function cleanString(str) {
-        if (!str) return "";
-        return str.toLowerCase().replace(/[^a-z0-9]/g, "");
+        return str ? str.toLowerCase().replace(/[^a-z0-9]/g, "") : "";
       }
 
       function setFilter(el, category) {
-        document
-          .querySelectorAll(".filter-tag")
-          .forEach((t) => t.classList.remove("active"));
+        document.querySelectorAll(".filter-tag").forEach(t => t.classList.remove("active"));
         el.classList.add("active");
 
         let filtered = [];
-
-        if (category === "paket") {
-          // LOGIK REKOMENDASI ML
+        if (category === "all") {
+          filtered = allFoods.filter(f => f.vendor_id == currentVendorId);
+        } else if (category === "paket") {
           if (recommendationRaw) {
-            const vendorData = recommendationRaw.find(
-              (v) => v.vendor_id == currentVendorId,
-            );
-            if (vendorData) {
-              let recNames = new Set();
-
-              // Ambil dari condiment_categories
-              Object.keys(vendorData.condiment_categories).forEach((key) => {
-                vendorData.condiment_categories[key].forEach((item) => {
-                  if (item["Nama Menu"])
-                    recNames.add(cleanString(item["Nama Menu"]));
-                });
-              });
-
-              // Ambil dari standalone_menus
-              vendorData.standalone_menus.forEach((item) => {
-                if (item["Nama Menu"])
-                  recNames.add(cleanString(item["Nama Menu"]));
-              });
-
-              // Filter item database Laravel yang ada di list ML
-              filtered = allFoods.filter((f) => {
-                return (
-                  f.vendor_id == currentVendorId &&
-                  recNames.has(cleanString(f.name))
-                );
-              });
+            const vData = recommendationRaw.find(v => v.vendor_id == currentVendorId);
+            if (vData) {
+              const recNames = new Set();
+              Object.keys(vData.condiment_categories).forEach(k => vData.condiment_categories[k].forEach(i => recNames.add(cleanString(i["Nama Menu"]))));
+              vData.standalone_menus.forEach(i => recNames.add(cleanString(i["Nama Menu"])));
+              filtered = allFoods.filter(f => f.vendor_id == currentVendorId && recNames.has(cleanString(f.name)));
             }
           }
         } else {
-          // LOGIK FILTER BIASA
-          filtered = allFoods.filter((f) => {
-            const matchVendor = f.vendor_id == currentVendorId;
-            const matchCat =
-              category === "all" ? true : CATEGORY_MAP[f.type] === category;
-            return matchVendor && matchCat;
-          });
+          // Filter Berdasarkan field 'type' di database (Lauk, Sayur, dkk)
+          filtered = allFoods.filter(f => f.vendor_id == currentVendorId && f.type === category);
         }
-
         renderFoods(filtered);
       }
 
-      // ── RENDER FOODS (WITH IMAGES & REAL DATA) ───
       function renderFoods(foods) {
         const grid = document.getElementById("menu-grid");
-        if (!grid) return;
-
-        grid.innerHTML = "";
-
-        if (foods.length === 0) {
-          grid.innerHTML =
-            '<p style="grid-column:1/-1;text-align:center;padding:20px;">Menu kosong</p>';
-          return;
-        }
-
-        foods.forEach((food) => {
-          const category = CATEGORY_MAP[food.type] || food.type.toLowerCase();
+        grid.innerHTML = foods.map(food => {
           const isSoldOut = !food.active;
-          const emoji = getEmojiByType(food.type);
-
           const imgUrl = getImageUrl(food.image);
-          const imgHTML = imgUrl
-            ? `<img src="${imgUrl}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
-            : "";
-
-          const card = document.createElement("div");
-          card.className = `menu-card ${isSoldOut ? "sold-out" : ""}`;
-
-          card.dataset.id = food.id;
-          card.dataset.name = food.name;
-          card.dataset.price = food.price;
-          card.dataset.est = food.estimated_time;
-          card.dataset.category = category;
-          card.dataset.spice = JSON.stringify(food.spice || []);
-
-          const dbAddons = (food.addons || []).map((a) => ({
-            label: a.addon ? a.addon.name : "Tambahan",
-            price: a.pivot ? a.pivot.extra_price : 0,
-          }));
-          card.dataset.addons = JSON.stringify(dbAddons);
-
-          card.innerHTML = `
-        <div class="menu-img-wrap">
-          ${imgHTML}
-          <div class="menu-img-placeholder" style="${imgUrl ? "display:none" : ""}">${emoji}</div>
-          ${isSoldOut ? '<div class="sold-out-badge">Habis</div>' : ""}
-        </div>
-        <div class="menu-info">
-          <p class="menu-name">${food.name}</p>
-          <p class="menu-price">${formatRp(food.price)}</p>
-        </div>
-      `;
-
-          if (!isSoldOut) {
-            card.onclick = () => openSheet(card);
-          }
-
-          grid.appendChild(card);
-        });
+          const emoji = getEmojiByType(food.type);
+          return `
+            <div class="menu-card ${isSoldOut ? "sold-out" : ""}" onclick="${isSoldOut ? '' : `openSheetWithData(${food.id})`}">
+              <div class="menu-img-wrap">
+                ${imgUrl ? `<img src="${imgUrl}" onerror="this.style.display='none'">` : ""}
+                <div class="menu-img-placeholder">${emoji}</div>
+                ${isSoldOut ? '<div class="sold-out-badge">Habis</div>' : ""}
+              </div>
+              <div class="menu-info">
+                <p class="menu-name">${food.name}</p>
+                <p class="menu-price">${formatRp(food.price)}</p>
+              </div>
+            </div>`;
+        }).join("");
       }
 
       function getEmojiByType(type) {
@@ -1065,82 +975,34 @@
         return map[type] || "🍴";
       }
 
-      // ── BOTTOM SHEET LOGIC ───────────────────────
-      function openSheet(card) {
-        document.getElementById("sheet-catatan").value = "";
-        const d = card.dataset;
-
+      function openSheetWithData(foodId) {
+        const food = allFoods.find(f => f.id === foodId);
         sheetData = {
-          id: d.id,
-          name: d.name,
-          basePrice: parseInt(d.price),
-          est: d.est,
-          emoji: getEmojiByType(d.category),
-          spice: JSON.parse(d.spice || "[]"),
-          addons: JSON.parse(d.addons || "[]"),
+          id: food.id, name: food.name, basePrice: parseInt(food.price),
+          est: food.estimated_time, emoji: getEmojiByType(food.type),
+          spice: food.spice || [],
+          addons: (food.addons || []).map(a => ({ label: a.addon.name, price: a.pivot.extra_price }))
         };
-
-        sheetQty = 1;
-        selectedSpice = null;
-        selectedAddons = [];
-
+        sheetQty = 1; selectedSpice = null; selectedAddons = [];
+        document.getElementById("sheet-catatan").value = "";
         document.getElementById("sheet-name").textContent = sheetData.name;
         document.getElementById("sheet-qty").textContent = 1;
         document.getElementById("sheet-img").textContent = sheetData.emoji;
-        document.getElementById("sheet-est-text").innerHTML =
-          `*estimasi waktu : <strong>${sheetData.est} menit</strong>`;
+        document.getElementById("sheet-est-text").innerHTML = `*estimasi: <strong>${sheetData.est} menit</strong>`;
+        const imgUrl = getImageUrl(food.image);
+        if(imgUrl) document.getElementById("sheet-img").innerHTML = `<img src="${imgUrl}">`;
+        
+        const spiceCon = document.getElementById("sheet-spice-options");
+        const spices = sheetData.spice.length ? sheetData.spice : ["Normal", "Pedas"];
+        spiceCon.innerHTML = spices.map(s => `<div class="sheet-option" onclick="selectSpice(this,'${s}')"><div class="sheet-option-radio"><div class="sheet-option-radio-dot"></div></div><span>${s}</span></div>`).join("");
+        
+        const addonCon = document.getElementById("sheet-addon-options");
+        document.getElementById("sheet-addon-section").style.display = sheetData.addons.length ? "block" : "none";
+        addonCon.innerHTML = sheetData.addons.map((a, i) => `<div class="sheet-option" onclick="toggleAddon(this,${i})"><div class="sheet-option-checkbox"><span class="sheet-option-checkmark">✓</span></div><span>${a.label} (+${formatRp(a.price)})</span></div>`).join("");
+        
         updateSheetPrice();
-
-        renderSpiceOptions();
-        renderAddonOptions();
-
         document.getElementById("sheet-overlay").classList.add("open");
         document.getElementById("bottom-sheet").classList.add("open");
-      }
-
-      function renderSpiceOptions() {
-        const spiceSec = document.getElementById("sheet-spice-section");
-        const spiceCon = document.getElementById("sheet-spice-options");
-
-        const spiceList =
-          sheetData.spice.length > 0
-            ? sheetData.spice
-            : ["Tidak Pedas", "Sedang", "Pedas"];
-
-        if (spiceList.length) {
-          spiceSec.style.display = "";
-          spiceCon.innerHTML = spiceList
-            .map(
-              (s) => `
-        <div class="sheet-option" onclick="selectSpice(this,'${s}')">
-          <div class="sheet-option-radio"><div class="sheet-option-radio-dot"></div></div>
-          <span>${s}</span>
-        </div>`,
-            )
-            .join("");
-        } else {
-          spiceSec.style.display = "none";
-        }
-      }
-
-      function renderAddonOptions() {
-        const addonSec = document.getElementById("sheet-addon-section");
-        const addonCon = document.getElementById("sheet-addon-options");
-
-        if (sheetData.addons.length) {
-          addonSec.style.display = "";
-          addonCon.innerHTML = sheetData.addons
-            .map(
-              (a, i) => `
-        <div class="sheet-option" data-idx="${i}" onclick="toggleAddon(this,${i})">
-          <div class="sheet-option-checkbox"><span class="sheet-option-checkmark">✓</span></div>
-          <span>${a.label}${a.price > 0 ? " (+" + formatRp(a.price) + ")" : ""}</span>
-        </div>`,
-            )
-            .join("");
-        } else {
-          addonSec.style.display = "none";
-        }
       }
 
       function closeSheet() {
@@ -1154,163 +1016,86 @@
         updateSheetPrice();
       }
 
-      function selectSpice(el, value) {
-        document
-          .querySelectorAll("#sheet-spice-options .sheet-option")
-          .forEach((o) => o.classList.remove("selected"));
+      function selectSpice(el, val) {
+        document.querySelectorAll("#sheet-spice-options .sheet-option").forEach(o => o.classList.remove("selected"));
         el.classList.add("selected");
-        selectedSpice = value;
+        selectedSpice = val;
       }
 
       function toggleAddon(el, idx) {
         el.classList.toggle("selected");
         const a = sheetData.addons[idx];
-        const pos = selectedAddons.findIndex((x) => x.label === a.label);
-        if (el.classList.contains("selected")) {
-          if (pos === -1)
-            selectedAddons.push({ label: a.label, price: a.price });
-        } else {
-          if (pos !== -1) selectedAddons.splice(pos, 1);
-        }
+        if (el.classList.contains("selected")) selectedAddons.push(a);
+        else selectedAddons = selectedAddons.filter(x => x.label !== a.label);
         updateSheetPrice();
       }
 
-      function addonTotal() {
-        return selectedAddons.reduce((s, a) => s + a.price, 0);
-      }
-
       function updateSheetPrice() {
-        const total = (sheetData.basePrice + addonTotal()) * sheetQty;
+        const total = (sheetData.basePrice + selectedAddons.reduce((s,a) => s+a.price, 0)) * sheetQty;
         document.getElementById("sheet-price").textContent = formatRp(total);
       }
 
-      // ── CART LOGIC ───────────────────────────────
       function confirmAddToOrder() {
-        const catatan = document.getElementById("sheet-catatan").value.trim();
-        const addonLabels = selectedAddons.map((a) => a.label);
-        const key =
-          sheetData.name +
-          "|" +
-          (selectedSpice || "") +
-          "|" +
-          addonLabels.sort().join(",");
-
-        const existing = cart.find((i) => i.key === key);
-        if (existing) {
-          existing.qty += sheetQty;
-        } else {
-          cart.push({
-            id: Date.now(),
-            food_id: parseInt(sheetData.id),
-            key,
-            name: sheetData.name,
-            basePrice: sheetData.basePrice,
-            addonAmt: addonTotal(),
-            qty: sheetQty,
-            est: parseInt(sheetData.est),
-            emoji: sheetData.emoji,
-            spice: selectedSpice,
-            addons: [...addonLabels],
-            catatan,
-          });
-        }
-        closeSheet();
-        renderCart();
-      }
-
-      function removeFromCart(id) {
-        cart = cart.filter((i) => i.id !== id);
-        renderCart();
-      }
-
-      function changeCartQty(id, delta) {
-        const item = cart.find((i) => i.id === id);
-        if (item) {
-          item.qty = Math.max(1, item.qty + delta);
-          renderCart();
-        }
+        cart.push({
+          id: Date.now(), food_id: sheetData.id, name: sheetData.name,
+          basePrice: sheetData.basePrice, addonAmt: selectedAddons.reduce((s,a) => s+a.price, 0),
+          qty: sheetQty, est: parseInt(sheetData.est), emoji: sheetData.emoji,
+          spice: selectedSpice, addons: selectedAddons.map(a => a.label),
+          catatan: document.getElementById("sheet-catatan").value,
+        });
+        saveCart(cart); renderCart(); closeSheet();
       }
 
       function renderCart() {
         const container = document.getElementById("order-items");
         const emptyEl = document.getElementById("cart-empty");
         const badge = document.getElementById("order-count");
+        container.querySelectorAll(".cart-item").forEach(el => el.remove());
 
         if (cart.length === 0) {
-          container.querySelectorAll(".cart-item").forEach((el) => el.remove());
-          emptyEl.style.display = "flex";
+          emptyEl.style.display = "flex"; badge.style.display = "none";
           document.getElementById("order-total").textContent = "Rp. 0";
           document.getElementById("order-est").textContent = "";
           document.getElementById("btn-pesan").disabled = true;
-          badge.style.display = "none";
           return;
         }
 
         emptyEl.style.display = "none";
-        let total = 0,
-          maxEst = 0,
-          count = 0;
+        let total = 0, maxEst = 0, count = 0;
 
-        const html = cart
-          .map((item) => {
-            const lineTotal = (item.basePrice + item.addonAmt) * item.qty;
-            total += lineTotal;
-            maxEst = Math.max(maxEst, item.est);
-            count += item.qty;
-            const noteText = [item.spice, ...item.addons, item.catatan]
-              .filter(Boolean)
-              .join(" · ");
-
-            return `
-        <div class="cart-item">
-          <div class="cart-item-top">
-            <div class="cart-item-img">${item.emoji}</div>
-            <div class="cart-item-info">
-              <p class="cart-item-name">${item.name}</p>
-              <p class="cart-item-price">${formatRp(item.basePrice + item.addonAmt)} / item</p>
-              ${noteText ? `<p class="cart-item-notes">${noteText}</p>` : ""}
-            </div>
-            <button class="cart-item-delete" onclick="removeFromCart(${item.id})">🗑</button>
-          </div>
-          <div class="cart-qty-row">
-            <button class="cart-qty-btn" onclick="changeCartQty(${item.id},-1)">−</button>
-            <span class="cart-qty-val">${item.qty}</span>
-            <button class="cart-qty-btn" onclick="changeCartQty(${item.id},1)">+</button>
-          </div>
-        </div>`;
-          })
-          .join("");
-
-        container.querySelectorAll(".cart-item").forEach((el) => el.remove());
-        emptyEl.insertAdjacentHTML("afterend", html);
+        cart.forEach(item => {
+          total += (item.basePrice + item.addonAmt) * item.qty;
+          maxEst = Math.max(maxEst, item.est);
+          count += item.qty;
+          // FIX ERROR: Tambahkan fallback [] untuk addons
+          const noteText = [item.spice, ...(item.addons || []), item.catatan].filter(Boolean).join(" · ");
+          const div = document.createElement("div");
+          div.className = "cart-item";
+          div.innerHTML = `<div class="cart-item-top"><div class="cart-item-img">${item.emoji}</div><div class="cart-item-info"><p class="cart-item-name">${item.name}</p><p class="cart-item-price">${formatRp(item.basePrice + item.addonAmt)}</p><p class="cart-item-notes">${noteText}</p></div><button class="cart-item-delete" onclick="removeItem(${item.id})">🗑</button></div><div class="cart-qty-row"><button class="cart-qty-btn" onclick="changeQty(${item.id},-1)">−</button><span class="cart-qty-val">${item.qty}</span><button class="cart-qty-btn" onclick="changeQty(${item.id},1)">+</button></div>`;
+          container.appendChild(div);
+        });
 
         document.getElementById("order-total").textContent = formatRp(total);
-        document.getElementById("order-est").innerHTML =
-          `*estimasi waktu : <strong>${maxEst} menit</strong>`;
+        document.getElementById("order-est").innerHTML = `*estimasi: <strong>${maxEst} mnt</strong>`;
         document.getElementById("btn-pesan").disabled = false;
-        badge.textContent = count;
-        badge.style.display = "flex";
+        badge.textContent = count; badge.style.display = "flex";
+      }
+
+      function removeItem(id) { cart = cart.filter(i => i.id !== id); saveCart(cart); renderCart(); }
+      function changeQty(id, d) { 
+        const i = cart.find(x => x.id === id); 
+        if(i) { i.qty = Math.max(1, i.qty + d); saveCart(cart); renderCart(); } 
       }
 
       function handlePesan() {
-        if (cart.length === 0) return;
-        saveCart(cart);
-        sessionStorage.setItem("maxEst", Math.max(...cart.map((i) => i.est)));
+        if (!cart.length) return;
+        sessionStorage.setItem("maxEst", Math.max(...cart.map(i => i.est)));
         window.location.href = "review-order.html";
       }
 
-      // ── INIT ─────────────────────────────────────
       document.addEventListener("DOMContentLoaded", () => {
         loadData();
-
-        const badgeDining = document.getElementById("order-type-badge");
-        if (badgeDining) badgeDining.textContent = diningType;
-
-        const moodbites = localStorage.getItem("moodbites");
-
-        if (moodbites === "NO_MOODBITES") {
-          document.getElementById("rekomendasi-btn").style.display = "none";
-        }
+        document.getElementById("order-type-badge").textContent = getDiningType();
       });
     </script>
   </body>
