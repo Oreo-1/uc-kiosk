@@ -111,8 +111,6 @@ class OrderController extends Controller
                 ->count();
             $queueNumber = $todayOrderCount + 1;
 
-            // ✅ FIX: AGGREGATE ITEMS BY FOOD_ID (PENTING!)
-            // Mencegah error "Duplicate entry" karena primary key order_food adalah (order_id, food_id)
             $totalPrice = 0;
             $totalEstimated = 0;
             $groupedItems = [];
@@ -120,7 +118,6 @@ class OrderController extends Controller
             foreach ($validated['foods'] as $item) {
                 $foodId = $item['food_id'];
                 
-                // Jika food_id sudah ada di array, tambahkan quantity-nya
                 if (!isset($groupedItems[$foodId])) {
                     $groupedItems[$foodId] = [
                         'quantity' => 0,
@@ -130,7 +127,6 @@ class OrderController extends Controller
                 
                 $groupedItems[$foodId]['quantity'] += $item['quantity'];
                 
-                // Gabungkan notes jika ada
                 if (!empty($item['notes'])) {
                     $existingNotes = $groupedItems[$foodId]['notes'];
                     $groupedItems[$foodId]['notes'] = $existingNotes 
@@ -139,7 +135,6 @@ class OrderController extends Controller
                 }
             }
 
-            // Process grouped items menjadi array untuk insert
             $orderFoods = [];
             foreach ($groupedItems as $foodId => $itemData) {
                 $food = $foods->firstWhere('id', $foodId);
@@ -418,6 +413,151 @@ class OrderController extends Controller
                 'message' => 'Failed to retrieve orders.',
                 'error' => config('app.debug') === true ? $e->getMessage() : 'Internal server error.'
             ], 500);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────
+    // ✅ MIDTRANS PAYMENT METHODS (UNTUK QR CODE DINAMIS)
+    // ─────────────────────────────────────────────────────
+
+    /**
+     * Create Midtrans transaction (untuk popup payment)
+     * POST /api/payment/create
+     */
+    public function createTransaction(Request $request)
+    {
+        try {
+            $request->validate([
+                'order_id' => 'required|string',
+                'gross_amount' => 'required|numeric',
+                'customer_name' => 'required|string',
+                'customer_email' => 'required|email',
+                'items' => 'required|array'
+            ]);
+
+            // Setup Midtrans
+            \Midtrans\Config::$serverKey = env('MIDTRANS_SERVER_KEY');
+            \Midtrans\Config::$isProduction = env('MIDTRANS_IS_PRODUCTION', false);
+            \Midtrans\Config::$isSanitized = true;
+            \Midtrans\Config::$is3ds = true;
+
+            $itemDetails = [];
+            foreach ($request->items as $item) {
+                $itemDetails[] = [
+                    'id' => $item['id'],
+                    'price' => (int) $item['price'],
+                    'quantity' => (int) $item['quantity'],
+                    'name' => $item['name']
+                ];
+            }
+
+            $params = [
+                'transaction_details' => [
+                    'order_id' => $request->order_id,
+                    'gross_amount' => (int) $request->gross_amount,
+                ],
+                'customer_details' => [
+                    'first_name' => $request->customer_name,
+                    'email' => $request->customer_email,
+                ],
+                'item_details' => $itemDetails,
+            ];
+
+            $snapToken = \Midtrans\Snap::getSnapToken($params);
+
+            return response()->json([
+                'success' => true,
+                'snap_token' => $snapToken
+            ]);
+        } catch (\Exception $e) {
+            \Log::error("Create transaction error: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Generate QR Code dinamis untuk QRIS (BERUBAH SETIAP TRANSAKSI)
+     * POST /api/payment/generate-qris
+     */
+    public function generateQRIS(Request $request)
+    {
+        try {
+            $request->validate([
+                'order_id' => 'required|string',
+                'gross_amount' => 'required|numeric',
+            ]);
+
+            // Setup Midtrans
+            \Midtrans\Config::$serverKey = env('MIDTRANS_SERVER_KEY');
+            \Midtrans\Config::$isProduction = env('MIDTRANS_IS_PRODUCTION', false);
+            \Midtrans\Config::$isSanitized = true;
+            \Midtrans\Config::$is3ds = true;
+
+            $params = [
+                'transaction_details' => [
+                    'order_id' => $request->order_id,
+                    'gross_amount' => (int) $request->gross_amount,
+                ],
+                'customer_details' => [
+                    'first_name' => $request->customer_name ?? 'Customer',
+                    'email' => $request->customer_email ?? 'customer@example.com',
+                ],
+            ];
+
+            // Dapatkan Snap Token dari Midtrans
+            $snapToken = \Midtrans\Snap::getSnapToken($params);
+            
+            // Generate URL QR Code dari Midtrans (ini yang akan berubah setiap transaksi)
+            $qrCodeUrl = "https://api.midtrans.com/v2/qr/" . $snapToken . "/qr-code";
+
+            \Log::info("QRIS Generated - Order ID: {$request->order_id}, Amount: {$request->gross_amount}");
+
+            return response()->json([
+                'success' => true,
+                'snap_token' => $snapToken,
+                'qr_code_url' => $qrCodeUrl,
+                'payment_url' => 'https://app.midtrans.com/snap/v2/qr/' . $snapToken,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error("Generate QRIS error: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Handle Midtrans notification (webhook)
+     * POST /api/payment/notification
+     */
+    public function handleNotification(Request $request)
+    {
+        try {
+            $notification = new \Midtrans\Notification();
+            
+            $transactionStatus = $notification->transaction_status;
+            $orderId = $notification->order_id;
+            $fraudStatus = $notification->fraud_status;
+
+            \Log::info("Midtrans Notification - Order ID: {$orderId}, Status: {$transactionStatus}");
+
+            // TODO: Update status order di database berdasarkan $orderId
+            // Contoh:
+            // $order = Order::where('id', $orderId)->first();
+            // if ($order) {
+            //     if ($transactionStatus == 'capture' || $transactionStatus == 'settlement') {
+            //         $order->update(['payment_status' => 'PAID']);
+            //     }
+            // }
+
+            return response()->json(['status' => 'success']);
+        } catch (\Exception $e) {
+            \Log::error("Midtrans notification error: " . $e->getMessage());
+            return response()->json(['status' => 'error'], 500);
         }
     }
 }

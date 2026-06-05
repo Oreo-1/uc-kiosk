@@ -24,7 +24,7 @@ function formatRp(amount) {
   return 'Rp. ' + Number(amount).toLocaleString('id-ID');
 }
 
-// Mapping kategori backend → frontend
+// Mapping kategori backend → frontend (masih dipakai untuk fallback)
 const CATEGORY_MAP = {
   'FOOD': 'makanan',
   'DRINK': 'minuman',
@@ -63,4 +63,43 @@ function getCart() {
 
 function clearCart() {
   localStorage.removeItem('cart');
+}
+
+// ─────────────────────────────────────────────────────
+// ✅ FITUR BARU: AUTO-DETECT KATEGORI BERDASARKAN NAMA
+// ─────────────────────────────────────────────────────
+
+// Database kata kunci untuk deteksi otomatis
+const CATEGORY_KEYWORDS = {
+  'Karbo': ['nasi', 'mie', 'pasta', 'roti', 'kentang', 'bubur', 'lontong', 'ketupat', 'bihun', 'spaghetti', 'makaroni', 'quinoa', 'jagung', 'umbi'],
+  'Lauk': ['ayam', 'ikan', 'daging', 'sapi', 'telur', 'bakso', 'nugget', 'sosis', 'udang', 'cumi', 'bebek', 'kambing', 'lele', 'empal', 'rendang', 'opor', 'gulai', 'sate', 'pepes', 'ikan bakar', 'ayam goreng', 'telur dadar', 'tempe', 'tahu'],
+  'Sayur': ['sayur', 'sop', 'tumis', 'capcay', 'gado', 'urap', 'lalap', 'bayam', 'kangkung', 'asem', 'lodeh', 'plecing', 'pecel', 'sayur asem', 'oseng', 'cah', 'tumis kangkung', 'sup', 'brokoli', 'wortel', 'buncis'],
+  'Minuman': ['es', 'jus', 'kopi', 'teh', 'soda', 'air', 'susu', 'jeruk', 'mango', 'lemon', 'coffe', 'latte', 'matcha', 'cappuccino', 'americano', 'espresso', 'coklat', 'choco', 'sirup', 'bandung', 'campur', 'cincau', 'alpukat', 'melon', 'semangka', 'stroberi'],
+  'Snack': ['gorengan', 'keripik', 'kue', 'sandwich', 'salad', 'martabak', 'cilok', 'cimol', 'siomay', 'batagor', 'pisang goreng', 'donat', 'lumpia', 'pastel', 'risoles', 'bakwan', 'tempe mendoan', 'tahu isi', 'otak-otak', 'pempek', 'cireng', 'maklon', 'brownies', 'cookies', 'pudding', 'jelly', 'es krim', 'ice cream']
+};
+
+// Fungsi untuk menentukan kategori berdasarkan Nama atau Type Database
+function getSmartCategory(food) {
+  // 1. Cek dulu, kalau di database sudah spesifik (Karbo, Lauk, dll), pakai itu
+  const dbType = food.type;
+  if (['Karbo', 'Lauk', 'Sayur', 'Minuman', 'Snack'].includes(dbType)) {
+    return dbType;
+  }
+
+  // 2. Kalau type database umum (FOOD, DRINK, SNACK) atau kosong, cek berdasarkan NAMA
+  const foodName = food.name.toLowerCase();
+
+  for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+    // Cek apakah ada kata kunci yang cocok di nama makanan
+    if (keywords.some(keyword => foodName.includes(keyword))) {
+      return category;
+    }
+  }
+
+  // 3. Fallback: Jika tidak ada yang cocok, kembalikan ke type asli atau 'Snack'
+  if (dbType === 'DRINK') return 'Minuman';
+  if (dbType === 'FOOD') return 'Lauk'; // Default untuk makanan umum
+  if (dbType === 'SNACK') return 'Snack';
+  
+  return 'Snack'; // Default terakhir
 }
