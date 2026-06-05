@@ -1,5 +1,5 @@
 const API_CONFIG = {
-  BASE_URL: 'http://103.185.52.14/api',
+  BASE_URL: 'https://backend.orderhere.dpdns.org/api',
 };
 
 // Helper: Fetch dengan error handling
