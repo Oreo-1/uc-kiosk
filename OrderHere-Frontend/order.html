@@ -241,8 +241,7 @@ async function loadData() {
     try {
       const mood = localStorage.getItem('moodbites') || 'neutral';
       const userId = '12cc0214-e266-4d1a-8c1d-b287e6c5a1f1';
-      const mlUrl = 'https://api-ml.aryo.fyi/recommend-external/' + encodeURIComponent(mood) + '/' + encodeURIComponent(userId);
-      const recRes = await fetch(mlUrl);
+      const mlUrl = `https://api-ml.aryo.fyi/recommend-external/${MOOD_PLACEHOLDER}/${USER_ID_PLACEHOLDER}`;      const recRes = await fetch(mlUrl);
       const recJson = await recRes.json();
       if (recJson && recJson.vendors) recommendationRaw = recJson.vendors;
     } catch (err) { console.error('Failed to fetch ML recommendations:', err); }
