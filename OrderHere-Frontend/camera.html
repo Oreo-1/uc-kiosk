@@ -15,68 +15,46 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
             background: #ffffff; 
             display: flex; 
+            /* Default for mobile: stack vertically */
             flex-direction: column;
             align-items: center; 
             justify-content: center; 
             min-height: 100vh; 
             min-height: -webkit-fill-available;
+            padding: 20px;
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
             overflow: hidden;
-            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+
+        /* Desktop and Tablet: Side-by-Side layout */
+        @media (min-width: 768px) {
+            body {
+                flex-direction: row;
+                gap: 50px; /* Fixed distance between video and button */
+            }
         }
 
         .video-container { 
-            width: 90%; 
+            width: 100%; 
             max-width: 600px; 
             aspect-ratio: 4 / 3; 
             border-radius: 24px; 
             overflow: hidden; 
             border: 4px solid #f97316;
             box-shadow: 
-                0 0 30px rgba(249, 115, 22, 0.5),
-                0 0 80px rgba(249, 115, 22, 0.3),
-                inset 0 0 30px rgba(249, 115, 22, 0.05);
+                0 0 30px rgba(249, 115, 22, 0.4),
+                0 0 80px rgba(249, 115, 22, 0.2);
             background: #f3f4f6;
             position: relative;
             animation: glowPulse 3s ease-in-out infinite;
+            /* Ensure it fits on short tablet screens */
+            max-height: 70vh;
         }
 
         @keyframes glowPulse {
-            0%, 100% { 
-                box-shadow: 
-                    0 0 30px rgba(249, 115, 22, 0.5),
-                    0 0 80px rgba(249, 115, 22, 0.3),
-                    inset 0 0 30px rgba(249, 115, 22, 0.05);
-            }
-            50% { 
-                box-shadow: 
-                    0 0 40px rgba(249, 115, 22, 0.7),
-                    0 0 100px rgba(249, 115, 22, 0.4),
-                    inset 0 0 40px rgba(249, 115, 22, 0.08);
-            }
-        }
-
-        /* Tablet Portrait */
-        @media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
-            .video-container {
-                max-width: 700px;
-                aspect-ratio: 4 / 3;
-            }
-        }
-
-        /* Tablet Landscape */
-        @media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
-            .video-container {
-                max-width: 800px;
-                aspect-ratio: 16 / 10;
-            }
-        }
-
-        /* Large Tablet / Small Desktop */
-        @media (min-width: 1024px) {
-            .video-container {
-                max-width: 900px;
-                aspect-ratio: 16 / 10;
-            }
+            0%, 100% { transform: scale(1); box-shadow: 0 0 30px rgba(249, 115, 22, 0.4); }
+            50% { transform: scale(1.005); box-shadow: 0 0 45px rgba(249, 115, 22, 0.6); }
         }
 
         video { 
@@ -84,29 +62,38 @@
             height: 100%; 
             object-fit: cover; 
             transform: scaleX(-1);
-            background: #e5e7eb;
         }
 
         .capture-btn { 
+            /* Spacing for mobile (when stacked) */
             margin-top: 30px;
-            padding: 18px 50px; 
+            
+            padding: 20px 50px; 
             background: linear-gradient(135deg, #f97316, #ea580c); 
             border: none; 
             border-radius: 50px; 
             color: white; 
-            font-size: 18px; 
+            font-size: 20px; 
             font-weight: bold; 
             cursor: pointer; 
-            box-shadow: 0 6px 25px rgba(249, 115, 22, 0.5);
-            transition: transform 0.1s, box-shadow 0.2s;
-            -webkit-user-select: none;
-            user-select: none;
-            letter-spacing: 0.5px;
+            box-shadow: 0 10px 30px rgba(249, 115, 22, 0.4);
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        /* Adjust button for side-by-side mode */
+        @media (min-width: 768px) {
+            .capture-btn {
+                margin-top: 0; /* Remove top margin when on the side */
+                padding: 25px 60px;
+                font-size: 22px;
+            }
         }
 
         .capture-btn:active { 
-            transform: scale(0.95); 
-            box-shadow: 0 3px 15px rgba(249, 115, 22, 0.4);
+            transform: scale(0.92); 
+            box-shadow: 0 5px 15px rgba(249, 115, 22, 0.4);
         }
 
         .capture-btn:disabled { 
@@ -114,14 +101,7 @@
             cursor: not-allowed; 
             opacity: 0.7;
             box-shadow: none;
-        }
-
-        /* Responsive button for tablets */
-        @media (min-width: 768px) {
-            .capture-btn {
-                padding: 20px 60px;
-                font-size: 20px;
-            }
+            transform: none;
         }
 
         canvas { display: none; }
@@ -133,7 +113,7 @@
         <video id="video" autoplay playsinline muted webkit-playsinline></video>
     </div>
 
-    <button class="capture-btn" id="captureBtn">Capture</button>
+    <button class="capture-btn" id="captureBtn">Capture Mood</button>
 
     <canvas id="canvas"></canvas>
 
@@ -149,11 +129,6 @@
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
         let currentStream = null;
-        let lastDetectedMood = null;
-
-        // Canvas target size (lebih kecil)
-        const CANVAS_MAX_WIDTH = 640;
-        const CANVAS_MAX_HEIGHT = 480;
 
         async function enumerateCameras() {
             try {
@@ -174,177 +149,88 @@
                 }
             }
             if (isMobile) {
-                const front = cameras.find(c => {
-                    const label = (c.label || "").toLowerCase();
-                    return label.includes("front") || label.includes("depan");
-                });
+                const front = cameras.find(c => (c.label || "").toLowerCase().includes("front"));
                 if (front) return front;
             }
             return cameras[0] || null;
         }
 
         async function requestCamera(targetDeviceId = null) {
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
-
-            if (currentStream) {
-                currentStream.getTracks().forEach(t => t.stop());
-                currentStream = null;
-            }
+            if (!navigator.mediaDevices?.getUserMedia) return;
+            if (currentStream) currentStream.getTracks().forEach(t => t.stop());
 
             if (!targetDeviceId) {
                 try {
-                    const tempConstraints = isMobile 
-                        ? { video: { facingMode: "user" }, audio: false }
-                        : { video: true, audio: false };
-                    
-                    const tempStream = await navigator.mediaDevices.getUserMedia(tempConstraints);
-                    tempStream.getTracks().forEach(t => t.stop());
-                    
+                    const temp = await navigator.mediaDevices.getUserMedia({ video: true });
+                    temp.getTracks().forEach(t => t.stop());
                     const cameras = await enumerateCameras();
                     const target = findTargetCamera(cameras);
-                    if (target) {
-                        targetDeviceId = target.deviceId;
-                        localStorage.setItem("preferred_camera_id", targetDeviceId);
-                    }
-                } catch { return; }
+                    if (target) targetDeviceId = target.deviceId;
+                } catch (e) { console.error(e); }
             }
 
-            const constraintsList = [
-                { video: { deviceId: { exact: targetDeviceId }, width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } }, audio: false },
-                { video: { deviceId: { exact: targetDeviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
-                { video: { deviceId: { exact: targetDeviceId } }, audio: false },
-                { video: { width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false },
-                { video: true, audio: false }
-            ];
+            const constraints = { 
+                video: targetDeviceId ? { deviceId: { exact: targetDeviceId } } : { facingMode: "user" },
+                audio: false 
+            };
 
-            let stream = null;
-            for (const constraints of constraintsList) {
-                try {
-                    stream = await navigator.mediaDevices.getUserMedia(constraints);
-                    break;
-                } catch { continue; }
-            }
-
-            if (!stream) return;
-
-            currentStream = stream;
-            videoElement.srcObject = stream;
-
-            videoElement.addEventListener("loadedmetadata", () => {
-                videoElement.play().catch(() => {});
-            }, { once: true });
-
-            setTimeout(() => {
-                if (videoElement.paused) videoElement.play().catch(() => {});
-            }, 500);
+            try {
+                currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+                videoElement.srcObject = currentStream;
+                videoElement.play();
+            } catch (e) { console.error(e); }
         }
-
-        captureBtn.addEventListener("click", capture);
-
-        document.addEventListener("keydown", (e) => {
-            if (e.code === "Space" && !captureBtn.disabled) {
-                e.preventDefault();
-                capture();
-            }
-        });
 
         function capture() {
             if (!currentStream) return;
+            captureBtn.disabled = true;
+            captureBtn.innerText = "Processing...";
 
             const canvas = document.getElementById("canvas");
             const ctx = canvas.getContext("2d");
             
-            // Hitung ukuran canvas yang lebih kecil dengan aspect ratio yang sama
-            const videoWidth = videoElement.videoWidth || 1920;
-            const videoHeight = videoElement.videoHeight || 1080;
-            
-            let targetWidth = videoWidth;
-            let targetHeight = videoHeight;
-            
-            // Scale down jika terlalu besar
-            if (targetWidth > CANVAS_MAX_WIDTH || targetHeight > CANVAS_MAX_HEIGHT) {
-                const ratio = Math.min(CANVAS_MAX_WIDTH / targetWidth, CANVAS_MAX_HEIGHT / targetHeight);
-                targetWidth = Math.floor(targetWidth * ratio);
-                targetHeight = Math.floor(targetHeight * ratio);
-            }
-            
-            canvas.width = targetWidth;
-            canvas.height = targetHeight;
+            canvas.width = videoElement.videoWidth / 2; // Reduced size for speed
+            canvas.height = videoElement.videoHeight / 2;
             
             ctx.translate(canvas.width, 0);
             ctx.scale(-1, 1);
             ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
 
-            captureBtn.disabled = true;
-
             canvas.toBlob((blob) => {
-                if (!blob) { captureBtn.disabled = false; return; }
-                sendToAndreML(blob);
-            }, "image/jpeg", 0.85);
+                if (blob) sendToAndreML(blob);
+                else captureBtn.disabled = false;
+            }, "image/jpeg", 0.8);
         }
 
         async function sendToAndreML(jpegBlob) {
             const formData = new FormData();
-            formData.append("image", jpegBlob, `mood_${USER_ID_PLACEHOLDER}.jpg`);
+            formData.append("image", jpegBlob, "mood.jpg");
             formData.append("user_id", USER_ID_PLACEHOLDER);
 
             try {
                 const response = await fetch(ANDRE_ML_ENDPOINT, { method: "POST", body: formData });
-                if (!response.ok) { captureBtn.disabled = false; return; }
-                
                 const data = await response.json();
-                const mood = extractMood(data);
-                lastDetectedMood = mood;
+                const mood = data.mood || data.result || "neutral";
                 await sendRecommendation(mood, USER_ID_PLACEHOLDER);
             } catch {
                 captureBtn.disabled = false;
+                captureBtn.innerText = "Capture Mood";
             }
         }
 
         async function sendRecommendation(mood, user_id) {
-            const safeMood = encodeURIComponent(mood.trim().toLowerCase());
-            const safeUserId = encodeURIComponent(user_id);
-            const targetUrl = `${RECOMMEND_ENDPOINT_BASE}/${safeMood}/${safeUserId}`;
-
+            const url = `${RECOMMEND_ENDPOINT_BASE}/${encodeURIComponent(mood.toLowerCase())}/${encodeURIComponent(user_id)}`;
             try {
-                const res = await fetch(targetUrl, {
-                    method: "POST", 
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ user_id, mood })
-                });
-                
-                if (res.ok) {
-                    setTimeout(() => { window.location.href = "index.html"; }, 1500);
-                    return;
-                }
-            } catch {}
-
-            try {
-                const res = await fetch(targetUrl, { method: "GET" });
-                if (res.ok) {
-                    setTimeout(() => { window.location.href = "index.html"; }, 1500);
-                    return;
-                }
-            } catch {}
-
-            captureBtn.disabled = false;
-        }
-
-        function extractMood(data) {
-            if (!data) return "neutral";
-            const fields = ["mood", "emotion", "result", "label", "prediction", "class", "sentiment", "expression"];
-            for (const field of fields) {
-                if (data[field]) return String(data[field]);
-                if (data.data && data.data[field]) return String(data.data[field]);
-                if (data.result && data.result[field]) return String(data.result[field]);
+                await fetch(url, { method: "POST" });
+                window.location.href = "index.html";
+            } catch {
+                captureBtn.disabled = false;
+                captureBtn.innerText = "Capture Mood";
             }
-            return "neutral";
         }
 
+        captureBtn.addEventListener("click", capture);
         window.addEventListener("load", () => requestCamera());
-        window.addEventListener("beforeunload", () => {
-            if (currentStream) currentStream.getTracks().forEach(t => t.stop());
-        });
     </script>
 </body>
 </html>
