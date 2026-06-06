@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OrderHere | Vendor Verification</title>
+    
+    <!-- LIBRARIES -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #1a1a1a; color: white; text-align: center; padding: 20px; }
+        #reader { width: 100%; max-width: 450px; margin: auto; border-radius: 20px; overflow: hidden; border: 2px solid #333; }
+        .result-box { margin-top: 25px; padding: 25px; border-radius: 20px; display: none; animation: pop 0.3s ease; }
+        .valid { background: #16a34a; border: 4px solid #bbf7d0; }
+        .invalid { background: #dc2626; border: 4px solid #fecaca; }
+        .btn-reset { margin-top: 20px; padding: 15px 30px; background: #444; border: none; color: white; border-radius: 10px; cursor: pointer; font-weight: bold; }
+        @keyframes pop { from { transform: scale(0.9); } to { transform: scale(1); } }
+    </style>
+</head>
+<body>
+
+    <h1>OrderHere Vendor</h1>
+    <p style="color: #888;">Scan Student Receipt QR</p>
+
+    <!-- THE CAMERA BOX -->
+    <div id="reader"></div>
+
+    <!-- THE RESULT DISPLAY -->
+    <div id="result" class="result-box">
+        <h2 id="status-title">Checking...</h2>
+        <p id="status-details"></p>
+        <button class="btn-reset" onclick="resetScanner()">Scan Next Order</button>
+    </div>
+
+    <script>
+        // --- 1. CONFIGURATION (Same as payment.html) ---
+        const RPC_URL = "https://eth-sepolia.g.alchemy.com/v2/YOUR_ALCHEMY_KEY";
+        const CONTRACT_ADDRESS = "0xYOUR_CONTRACT_ADDRESS";
+        const ABI = [
+            "function getOrderStatus(bytes32 _orderHash) external view returns (bool exists, bool isClaimed, uint256 time, address vendor)"
+        ];
+
+        // --- 2. BLOCKCHAIN LOGIC ---
+        async function verifyOnBlockchain(scannedHash) {
+            const resultBox = document.getElementById('result');
+            const title = document.getElementById('status-title');
+            const details = document.getElementById('status-details');
+
+            resultBox.style.display = "block";
+            title.innerText = "Checking Blockchain...";
+
+            try {
+                const provider = new ethers.JsonRpcProvider(RPC_URL);
+                const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
+
+                // We use getOrderStatus to check without spending GAS
+                const status = await contract.getOrderStatus(scannedHash);
+
+                if (!status.exists) {
+                    // SCENARIO 1: FAKE RECEIPT
+                    resultBox.className = "result-box invalid";
+                    title.innerText = "❌ INVALID RECEIPT";
+                    details.innerText = "Warning: This hash is not found on the blockchain. This might be a fake screenshot!";
+                } 
+                else if (status.isClaimed) {
+                    // SCENARIO 2: DOUBLE CLAIMING
+                    resultBox.className = "result-box invalid";
+                    title.innerText = "⚠️ ALREADY USED";
+                    details.innerText = "This receipt was already used to claim food. Do not give food!";
+                } 
+                else {
+                    // SCENARIO 3: SUCCESS
+                    resultBox.className = "result-box valid";
+                    title.innerText = "✅ VALID RECEIPT";
+                    details.innerText = "Blockchain Verified. You can serve the food now!";
+                    
+                    // Optional: In a real app, you would now call 'verifyAndClaim' 
+                    // to mark it as used, but that requires Gas from the vendor.
+                }
+            } catch (err) {
+                console.error(err);
+                title.innerText = "Connection Error";
+                details.innerText = "Could not reach Ethereum. Check internet.";
+            }
+        }
+
+        // --- 3. CAMERA LOGIC ---
+        const html5QrCode = new Html5Qrcode("reader");
+        
+        function startScanner() {
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                { fps: 10, qrbox: 250 },
+                (decodedText) => {
+                    // When a QR is detected:
+                    html5QrCode.pause(); // Stop camera
+                    verifyOnBlockchain(decodedText); // Check Blockchain
+                }
+            ).catch(err => console.error("Camera Error", err));
+        }
+
+        function resetScanner() {
+            document.getElementById('result').style.display = "none";
+            html5QrCode.resume(); // Restart camera
+        }
+
+        // Start automatically
+        window.onload = startScanner;
+    </script>
+</body>
+</html>

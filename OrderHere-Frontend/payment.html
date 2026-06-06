@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Payment - OrderHere</title>
+  <!-- ✅ BLOCKCHAIN LIBRARIES ADDED -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  
   <style>
     /* Global Reset */
     * { margin: 0; padding: 0; box-sizing: border-box; -ms-overflow-style: none; scrollbar-width: none; }
@@ -103,6 +107,22 @@
       padding: 20px;
     }
 
+    /* ── BLOCKCHAIN RECEIPT UI ── */
+    .blockchain-receipt {
+      width: 100%;
+      margin-top: 10px;
+      margin-bottom: 24px;
+      padding: 20px;
+      background: #fff;
+      border: 2px solid #f97316;
+      border-radius: 16px;
+      text-align: center;
+      display: none; /* Only show when needed */
+    }
+    .bc-status { font-size: 12px; font-weight: 700; color: #f97316; margin-bottom: 10px; text-transform: uppercase; }
+    #bc-qrcode { display: flex; justify-content: center; margin-bottom: 10px; }
+    .bc-hash { font-size: 9px; color: #9ca3af; word-break: break-all; }
+
     .summary {
       width: 100%;
       background: #ffffff;
@@ -129,8 +149,6 @@
       align-items: center;
       margin-top: 32px;
     }
-
-    .summary-col.right { text-align: right; }
 
     .pay-button {
       width: 100%;
@@ -267,7 +285,7 @@
 <div class="loading-overlay" id="loadingOverlay">
   <div class="loading-box">
     <div style="width: 32px; height: 32px; border: 4px solid #e9ecef; border-top-color: #FF6600; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto;"></div>
-    <p>Memproses pembayaran...</p>
+    <p id="loading-text">Memproses pembayaran...</p>
   </div>
 </div>
 
@@ -278,6 +296,13 @@
     <p class="card-title" id="card-title">Memuat...</p>
     <p class="card-subtitle" id="card-subtitle">—</p>
     <p class="card-antrian" id="card-antrian">No. Antrian : —</p>
+
+    <!-- UI Block for Blockchain Proof (Shows for Cash or Post-Payment) -->
+    <div class="blockchain-receipt" id="blockchainReceipt">
+        <div class="bc-status" id="bc-status">Authenticating...</div>
+        <div id="bc-qrcode"></div>
+        <div class="bc-hash" id="bc-hash"></div>
+    </div>
 
     <img class="tunai-img" id="tunai-img"
       src="assets/review-order/tunai-illustration.svg"
@@ -325,19 +350,93 @@
   }
 
   // ✅ LOADING STATE
-  function setLoading(isLoading) {
+  function setLoading(isLoading, text = "Memproses pembayaran...") {
     const overlay = document.getElementById('loadingOverlay');
+    const loadingText = document.getElementById('loading-text');
     const btn = document.getElementById('payButton');
+    
     if (isLoading) {
+      loadingText.innerText = text;
       overlay.classList.add('active');
-      btn.disabled = true;
-      btn.classList.add('loading');
+      if(btn) btn.disabled = true;
     } else {
       overlay.classList.remove('active');
-      btn.disabled = false;
-      btn.classList.remove('loading');
+      if(btn) btn.disabled = false;
     }
   }
+
+  // ── BLOCKCHAIN STANDALONE LOGIC ──
+const BLOCKCHAIN_CONFIG = {
+    RPC_URL: "https://eth-sepolia.g.alchemy.com/v2/dS-WP2eW36UzHIeWIxnoQ",
+    PRIVATE_KEY: "6bf46006d1e441a1d9f0e90edeb1e9c24e6a5ad1fcc2b78b19cbfce03c558b85", // Pastikan diawali 0x
+    CONTRACT_ADDRESS: "0xe79398BF1E8F9B0967fa4e35fDD72642CA46aC1f", // Pastikan diawali 0x
+    ABI: [
+        "function anchorOrder(bytes32 _orderHash, address _vendor) external",
+        "function verifyAndClaim(bytes32 _orderHash) external",
+        "function getOrderStatus(bytes32 _orderHash) external view returns (bool exists, bool isClaimed, uint256 time, address vendor)"
+    ],
+    SALT: "UC_MAKASSAR_SECRET_2024"
+};
+
+async function anchorOrderToBlockchain(orderData) {
+    const bcStatus = document.getElementById('bc-status');
+    const bcHash = document.getElementById('bc-hash');
+
+    try {
+        // --- MEMBERSIHKAN ALAMAT DARI SPASI/TYPO ---
+        const cleanContractAddr = BLOCKCHAIN_CONFIG.CONTRACT_ADDRESS.trim();
+        const vendorAddr = "0x358851457a52C42B802C7811Ff92C23CF3D27423".trim(); // Pakai alamat Metamask Anda
+
+        // --- VALIDASI FORMAT ---
+        if (!ethers.isAddress(cleanContractAddr)) {
+            throw new Error("ALAMAT KONTRAK TIDAK VALID! Pastikan diawali 0x dan copy ulang dari Remix.");
+        }
+        if (!ethers.isAddress(vendorAddr)) {
+            throw new Error("ALAMAT VENDOR TIDAK VALID! Pastikan alamat wallet Metamask Anda benar.");
+        }
+
+        document.getElementById('blockchainReceipt').style.display = "block";
+        bcStatus.innerText = "Connecting to Ethereum...";
+
+        const provider = new ethers.JsonRpcProvider(BLOCKCHAIN_CONFIG.RPC_URL);
+        const wallet = new ethers.Wallet(BLOCKCHAIN_CONFIG.PRIVATE_KEY, provider);
+        
+        // Inisialisasi Kontrak
+        const contract = new ethers.Contract(cleanContractAddr, BLOCKCHAIN_CONFIG.ABI, wallet);
+
+        // Buat Fingerprint (Hash)
+        const orderId = String(orderData.id || "0");
+        const total = String(orderData.total_price || "0");
+        const fingerprint = ethers.id(orderId + total + BLOCKCHAIN_CONFIG.SALT);
+
+        bcStatus.innerText = "Anchoring Order to Blockchain...";
+
+        // --- EKSEKUSI TRANSAKSI ---
+        // Pastikan fungsi di smart contract Anda adalah 'anchorOrder'
+        const tx = await contract.anchorOrder(fingerprint, vendorAddr);
+        
+        bcStatus.innerText = "Waiting for Sepolia Confirmation...";
+        await tx.wait();
+
+        bcStatus.innerText = "✅ Successfully Anchored!";
+        bcStatus.style.color = "#16a34a";
+        bcHash.innerText = "Blockchain Proof: " + fingerprint;
+
+        // Render QR
+        new QRCode(document.getElementById("bc-qrcode"), {
+            text: fingerprint,
+            width: 160,
+            height: 160
+        });
+
+    } catch (err) {
+        console.error("DEBUG BLOCKCHAIN ERROR:", err);
+        bcStatus.innerText = "Blockchain Error: " + err.message;
+        bcStatus.style.color = "red";
+    }
+}
+
+
 
   // ✅ CREATE MIDTRANS TRANSACTION (UNTUK POPUP)
   async function createMidtransTransaction(orderData) {
@@ -379,24 +478,22 @@
       const result = await createMidtransTransaction(paymentData);
       if (result.success && result.snap_token) {
         snap.pay(result.snap_token, {
-          onSuccess: function(res) {
+          onSuccess: async function(res) {
             showToast('Pembayaran berhasil! 🎉', 'success');
             localStorage.removeItem('cart');
-            sessionStorage.setItem('lastOrder', JSON.stringify({ order_id: res.order_id, status: 'paid', payment_type: res.payment_type }));
-            setTimeout(() => window.location.href = 'order.html', 2000);
+            
+            // RUN BLOCKCHAIN ANCHOR AFTER PAYMENT
+            const orderObj = JSON.parse(sessionStorage.getItem('order') || '{}');
+            await anchorOrderToBlockchain(orderObj);
+            
+            setTimeout(() => window.location.href = 'order.html', 4000);
           },
-          onPending: function(res) {
-            showToast('Menunggu pembayaran... Cek email/VA', 'info');
-            sessionStorage.setItem('pendingOrder', JSON.stringify({ order_id: res.order_id, status: 'pending' }));
-          },
-          onError: function() { showToast('Pembayaran gagal. Silakan coba lagi.', 'error'); },
+          onPending: function(res) { showToast('Menunggu pembayaran...', 'info'); },
+          onError: function() { showToast('Pembayaran gagal.', 'error'); },
           onClose: function() { console.log('Popup ditutup'); }
         });
-      } else {
-        throw new Error(result.message || 'Gagal membuat transaksi');
       }
     } catch (error) {
-      console.error('Payment error:', error);
       showToast('Error: ' + error.message, 'error');
     } finally {
       setLoading(false);
@@ -406,64 +503,21 @@
   // ✅ FUNGSI LOAD QR CODE DINAMIS (UNIK PER ORDER)
   async function loadDynamicQRCode(order) {
     const qrWrap = document.getElementById('qris-wrap');
-    
-    // Hitung total
-    let total = 0;
-    if (order.total_price) {
-      total = parseFloat(order.total_price);
-    } else if (order.total_amount) {
-      total = parseFloat(order.total_amount);
-    } else {
-      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    }
-
-    if (total === 0) {
-      qrWrap.innerHTML = '<p class="qris-placeholder">Total Rp. 0<br>Tambah item dulu</p>';
-      return;
-    }
-
-    // Show loading state
-    qrWrap.innerHTML = '<div style="color: #6b7280; text-align: center; padding: 20px;">Generating QR Code...</div>';
+    let total = parseFloat(order.total_price || 0);
 
     try {
-      // Generate order ID unik untuk transaksi ini
-      const orderId = 'QRIS-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6);
-      
-      // Request ke backend Laravel
+      const orderId = 'QRIS-' + Date.now();
       const response = await fetch(API_CONFIG.BASE_URL + '/payment/generate-qris', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({
-          order_id: orderId,
-          gross_amount: Math.round(total),
-          customer_name: 'Customer',
-          customer_email: 'customer@orderhere.com'
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: orderId, gross_amount: Math.round(total) })
       });
-
       const result = await response.json();
-
       if (result.success && result.qr_code_url) {
-        // ✅ FIX CACHE: Tambahkan timestamp agar browser tidak menyimpan gambar lama
-        const uniqueQrUrl = result.qr_code_url + '?t=' + new Date().getTime();
-        
-        // Tampilkan QR Code dinamis dari Midtrans
-        qrWrap.innerHTML = `
-          <img src="${uniqueQrUrl}" alt="QR Code Pembayaran" 
-               style="width: 100%; height: 100%; object-fit: contain;">
-        `;
-        
-        // Simpan snap token untuk referensi
-        sessionStorage.setItem('snapToken', result.snap_token);
-        sessionStorage.setItem('currentOrderId', orderId);
-      } else {
-        throw new Error(result.message || 'Gagal generate QR');
+        qrWrap.innerHTML = `<img src="${result.qr_code_url}" style="width: 100%; height: 100%; object-fit: contain;">`;
       }
     } catch (error) {
-      console.error('QR Generation error:', error);
-      // Fallback: tampilkan placeholder jika gagal
-      qrWrap.innerHTML = '<p class="qris-placeholder">Gagal load QR Code<br>Silakan refresh halaman</p>';
+      qrWrap.innerHTML = '<p class="qris-placeholder">Gagal load QR Code</p>';
     }
   }
 
@@ -480,52 +534,30 @@
       document.getElementById('tunai-img').style.display = '';
       document.getElementById('qris-wrap').style.display = 'none';
       document.getElementById('payButton').style.display = 'none';
+      
+      // TRIGGER BLOCKCHAIN IMMEDIATELY FOR CASH (Proof of System Entry)
+      anchorOrderToBlockchain(order);
+
     } else {
       document.getElementById('card-title').textContent = 'Scan QRIS / E-Wallet';
-      document.getElementById('card-subtitle').textContent = '*Scan melalui GoPay, OVO, DANA, atau Mobile Banking';
-      document.getElementById('tunai-img').style.display = 'none';
+      document.getElementById('card-subtitle').textContent = '*Scan melalui App Pembayaran';
       document.getElementById('qris-wrap').style.display = '';
       document.getElementById('payButton').style.display = '';
-      
-      // ✅ AUTO-LOAD DYNAMIC QR CODE
-      await loadDynamicQRCode(order);
+      loadDynamicQRCode(order);
     }
     document.getElementById('card-antrian').textContent = `No. Antrian : ${antrian}`;
 
-    // ✅ UPDATE SUMMARY - DINAMIS
-    let total = 0;
-    if (order.total_price) {
-      total = parseFloat(order.total_price);
-    } else if (order.total_amount) {
-      total = parseFloat(order.total_amount);
-    } else {
-      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    }
-    document.getElementById('summary-total').textContent = formatRp(total);
+    // Update Total
+    document.getElementById('summary-total').textContent = formatRp(order.total_price || 0);
 
-    // ✅ UPDATE ITEM LABEL - FIX: Handle quantity undefined
-    let itemLabel = '—';
+    // Update Item Summary
     const foods = order.foods || [];
-    
     if (foods.length > 0) {
-      const firstItem = foods[0];
-      const firstName = firstItem.food ? firstItem.food.name : (firstItem.name || 'Item');
-      // FIX: Cek pivot.quantity (dari Laravel API) atau quantity langsung
-      const qty = firstItem.pivot?.quantity || firstItem.quantity || 1;
-      itemLabel = foods.length === 1 ? `${firstName} x${qty}` : `${firstName} & ${foods.length - 1} lainnya`;
-    } else {
-      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      if (cart.length > 0) {
-        const firstItem = cart[0];
-        // FIX: Pastikan quantity ada, default ke 1 jika undefined
-        const quantity = firstItem.quantity || 1;
-        itemLabel = cart.length === 1 ? `${firstItem.name} x${quantity}` : `${firstItem.name} & ${cart.length - 1} lainnya`;
-      }
+      const first = foods[0].food?.name || foods[0].name;
+      const qty = foods[0].pivot?.quantity || 1;
+      document.getElementById('summary-items').textContent = foods.length === 1 ? `${first} x${qty}` : `${first} & ${foods.length - 1} lainnya`;
     }
-    document.getElementById('summary-items').textContent = itemLabel;
 
-    // Attach pay button
     const payButton = document.getElementById('payButton');
     if (payButton) payButton.addEventListener('click', handlePayment);
   });
