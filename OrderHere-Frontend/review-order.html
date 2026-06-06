@@ -430,6 +430,11 @@
       const lineTotal = (item.basePrice + item.addonAmt) * item.qty;
       total += lineTotal;
 
+      const imgUrl = getImageUrl(item.image);
+      const displayMedia = imgUrl 
+        ? `<img src="${imgUrl}" onerror="this.parentElement.innerHTML='${item.emoji}'">` 
+        : item.emoji;
+
       const addonLines = item.addons.map(a => `<span>+ ${a}</span>`).join('<br>');
       const spiceLine  = item.spice ? `<span>${item.spice}</span>` : '';
       const hasDetails = item.addons.length || item.spice;
@@ -438,7 +443,7 @@
       el.className = 'order-item';
       el.style.animationDelay = `${delay}ms`;
       el.innerHTML = `
-        <div class="order-item-img">${item.emoji}</div>
+        <div class="order-item-img">${displayMedia}</div>
         <div class="order-item-info">
           <p class="order-item-name">${item.name}</p>
           ${item.qty > 1 ? `<p class="order-item-qty">x${item.qty}</p>` : ''}
