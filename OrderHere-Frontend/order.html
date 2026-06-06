@@ -993,6 +993,7 @@
         sheetData = {
           id: food.id, name: food.name, basePrice: parseInt(food.price),
           est: food.estimated_time, emoji: getEmojiByType(food.type),
+          image: food.image,
           spice: food.spice || [],
           addons: (food.addons || []).map(a => ({ label: a.addon.name, price: a.pivot.extra_price }))
         };
@@ -1054,45 +1055,68 @@
           id: Date.now(), food_id: sheetData.id, name: sheetData.name,
           basePrice: sheetData.basePrice, addonAmt: addonAmt,
           qty: sheetQty, est: parseInt(sheetData.est), emoji: sheetData.emoji,
+          image: sheetData.image,
           spice: selectedSpice, addons: selectedAddons.map(a => a.label),
           catatan: document.getElementById("sheet-catatan").value,
         });
         saveCart(cart); renderCart(); closeSheet();
       }
 
-      function renderCart() {
-        const container = document.getElementById("order-items");
-        const emptyEl = document.getElementById("cart-empty");
-        const badge = document.getElementById("order-count");
-        container.querySelectorAll(".cart-item").forEach(el => el.remove());
+function renderCart() {
+  const container = document.getElementById("order-items");
+  const emptyEl = document.getElementById("cart-empty");
+  const badge = document.getElementById("order-count");
+  container.querySelectorAll(".cart-item").forEach(el => el.remove());
 
-        if (cart.length === 0) {
-          emptyEl.style.display = "flex"; badge.style.display = "none";
-          document.getElementById("order-total").textContent = "Rp. 0";
-          document.getElementById("order-est").textContent = "";
-          document.getElementById("btn-pesan").disabled = true;
-          return;
-        }
+  if (cart.length === 0) {
+    emptyEl.style.display = "flex"; badge.style.display = "none";
+    document.getElementById("order-total").textContent = "Rp. 0";
+    document.getElementById("order-est").textContent = "";
+    document.getElementById("btn-pesan").disabled = true;
+    return;
+  }
 
-        emptyEl.style.display = "none";
-        let total = 0, maxEst = 0, count = 0;
+  emptyEl.style.display = "none";
+  let total = 0, maxEst = 0, count = 0;
 
-        cart.forEach(item => {
-          total += (item.basePrice + item.addonAmt) * item.qty;
-          maxEst = Math.max(maxEst, item.est);
-          count += item.qty;
-          const noteText = [item.spice, ...(item.addons || []), item.catatan].filter(Boolean).join(" · ");
-          const div = document.createElement("div");
-          div.className = "cart-item";
-          div.innerHTML = `<div class="cart-item-top"><div class="cart-item-img">${item.emoji}</div><div class="cart-item-info"><p class="cart-item-name">${item.name}</p><p class="cart-item-price">${formatRp(item.basePrice + item.addonAmt)}</p><p class="cart-item-notes">${noteText}</p></div><button class="cart-item-delete" onclick="removeItem(${item.id})">🗑</button></div><div class="cart-qty-row"><button class="cart-qty-btn" onclick="changeQty(${item.id},-1)">−</button><span class="cart-qty-val">${item.qty}</span><button class="cart-qty-btn" onclick="changeQty(${item.id},1)">+</button></div>`;
-          container.appendChild(div);
-        });
+  cart.forEach(item => {
+    total += (item.basePrice + item.addonAmt) * item.qty;
+    maxEst = Math.max(maxEst, item.est);
+    count += item.qty;
+    
+    // --- LOGIKA GAMBAR BARU ---
+    const imgUrl = getImageUrl(item.image);
+    const mediaDisplay = imgUrl 
+      ? `<img src="${imgUrl}" alt="${item.name}" onerror="this.parentElement.innerHTML='${item.emoji}'">` 
+      : item.emoji;
+    // ---------------------------
 
-        document.getElementById("order-total").textContent = formatRp(total);
-        document.getElementById("order-est").innerHTML = `*estimasi: <strong>${maxEst} mnt</strong>`;
-        document.getElementById("btn-pesan").disabled = false;
-        badge.textContent = count; badge.style.display = "flex";
-      }
+    const noteText = [item.spice, ...(item.addons || []), item.catatan].filter(Boolean).join(" · ");
+    const div = document.createElement("div");
+    div.className = "cart-item";
+    div.innerHTML = `
+      <div class="cart-item-top">
+        <div class="cart-item-img">${mediaDisplay}</div>
+        <div class="cart-item-info">
+          <p class="cart-item-name">${item.name}</p>
+          <p class="cart-item-price">${formatRp(item.basePrice + item.addonAmt)}</p>
+          <p class="cart-item-notes">${noteText}</p>
+        </div>
+        <button class="cart-item-delete" onclick="removeItem(${item.id})">🗑</button>
+      </div>
+      <div class="cart-qty-row">
+        <button class="cart-qty-btn" onclick="changeQty(${item.id},-1)">−</button>
+        <span class="cart-qty-val">${item.qty}</span>
+        <button class="cart-qty-btn" onclick="changeQty(${item.id},1)">+</button>
+      </div>`;
+    container.appendChild(div);
+  });
+
+  document.getElementById("order-total").textContent = formatRp(total);
+  document.getElementById("order-est").innerHTML = `*estimasi: <strong>${maxEst} mnt</strong>`;
+  document.getElementById("btn-pesan").disabled = false;
+  badge.textContent = count; badge.style.display = "flex";
+}
 
       function removeItem(id) { cart = cart.filter(i => i.id !== id); saveCart(cart); renderCart(); }
       function changeQty(id, d) { 
