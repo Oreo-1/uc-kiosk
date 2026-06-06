@@ -580,4 +580,22 @@ class OrderController extends Controller
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
+
+    public function showByHash($hash) 
+{
+    // Pastikan nama kolom di database adalah 'block_hash'
+    $order = Order::where('block_hash', $hash)->first();
+
+    if (!$order) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Order tidak ditemukan dengan hash tersebut'
+        ], 404);
+    }
+
+    return response()->json([
+        'success' => true,
+        'data' => $order
+    ]);
+}
 }
