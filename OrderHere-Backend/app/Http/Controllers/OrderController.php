@@ -544,4 +544,34 @@ class OrderController extends Controller
             return response()->json(['status' => 'error'], 500);
         }
     }
+
+    public function getByHash($hash)
+{
+    try {
+        // Find order by hash and load the foods relationship
+        $order = \App\Models\Order::where('blockchain_hash', $hash)
+            ->with(['foods', 'vendor'])
+            ->first();
+
+        if (!$order) {
+            return response()->json(['success' => false, 'message' => 'Order not found in DB'], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id' => $order->id,
+                'total_price' => $order->total_price,
+                'notes' => $order->notes_order,
+                'queue_number' => $order->queue_number,
+                // Map the foods into a clean list for the scanner
+                'items' => $order->foods->map(function($f) {
+                    return $f->pivot->quantity . "x " . $f->name;
+                })->implode(', ')
+            ]
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+    }
+}
 }
