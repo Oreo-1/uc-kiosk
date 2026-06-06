@@ -407,8 +407,7 @@ async function anchorOrderToBlockchain(orderData) {
         // Buat Fingerprint (Hash)
         const orderId = String(orderData.id || "0");
         const total = String(orderData.total_price || "0");
-        const fingerprint = ethers.id(orderId + total + BLOCKCHAIN_CONFIG.SALT);
-
+        const fingerprint = ethers.sha256(ethers.toUtf8Bytes(orderId + total + BLOCKCHAIN_CONFIG.SALT));
         bcStatus.innerText = "Anchoring Order to Blockchain...";
 
         // --- EKSEKUSI TRANSAKSI ---
