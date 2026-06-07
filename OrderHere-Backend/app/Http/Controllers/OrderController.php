@@ -581,21 +581,31 @@ class OrderController extends Controller
         }
     }
 
-    public function showByHash($hash) 
-{
-    // Pastikan nama kolom di database adalah 'block_hash'
-    $order = Order::where('block_hash', $hash)->first();
+// app/Http/Controllers/OrderController.php
 
+public function showByHash($hash)
+{
+    // 1. Cari order berdasarkan block_hash
+    // 2. Gunakan with('foods') untuk mengambil data makanan di dalam order tersebut
+    $order = Order::with(['foods' => function($query) {
+        // Jika Anda ingin memastikan detail vendor juga ikut terbawa:
+        $query->with('vendor'); 
+    }])
+    ->where('block_hash', $hash)
+    ->first();
+
+    // Jika tidak ditemukan
     if (!$order) {
         return response()->json([
             'success' => false,
-            'message' => 'Order tidak ditemukan dengan hash tersebut'
+            'message' => 'Order dengan hash tersebut tidak ditemukan.'
         ], 404);
     }
 
+    // Jika ditemukan, kembalikan data lengkap
     return response()->json([
         'success' => true,
         'data' => $order
-    ]);
+    ], 200);
 }
 }
