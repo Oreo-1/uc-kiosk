@@ -80,15 +80,32 @@
                 const response = await fetch(LARAVEL_API + scannedHash);
                 const result = await response.json();
 
-                if (result.success) {
-                    resultBox.className = "result-box valid";
-                    title.innerText = "✅ VALID & VERIFIED";
-                    detailsPanel.style.display = "block";
-                    
-                    document.getElementById('res-items').innerText = result.data.items;
-                    document.getElementById('res-notes').innerText = result.data.notes || "Tidak ada catatan";
-                    document.getElementById('res-meta').innerText = `Antrian #${result.data.queue_number} | Rp ${result.data.total_price}`;
-                }
+if (result.success) {
+    const d = result.data; // Singkatan agar kode lebih pendek
+    
+    resultBox.className = "result-box valid";
+    title.innerText = "✅ VALID & VERIFIED";
+    detailsPanel.style.display = "block";
+    
+    // 1. LOGIKA UNTUK MENU PESANAN (Mendukung format 'items' atau 'foods')
+    let menuText = "";
+    if (d.items) {
+        menuText = d.items; // Jika sudah diproses di Controller
+    } else if (d.foods && Array.isArray(d.foods)) {
+        // Jika masih format mentah Laravel, kita olah di sini
+        menuText = d.foods.map(f => {
+            const q = f.pivot ? f.pivot.quantity : 1;
+            return q + "x " + f.name;
+        }).join(", ");
+    }
+    document.getElementById('res-items').innerText = menuText || "Menu tidak terbaca";
+
+    // 2. LOGIKA UNTUK CATATAN (Mendukung 'notes' atau 'notes_order')
+    document.getElementById('res-notes').innerText = d.notes || d.notes_order || "Tidak ada catatan";
+
+    // 3. LOGIKA UNTUK ANTRIAN & HARGA
+    document.getElementById('res-meta').innerText = `Antrian #${d.queue_number} | Rp ${d.total_price}`;
+}
 
             } catch (err) {
                 title.innerText = "System Error: " + err.message;
