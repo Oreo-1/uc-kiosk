@@ -404,11 +404,11 @@ async function anchorOrderToBlockchain(orderData) {
         const orderId = String(orderData.id || "0");
         const total = String(orderData.total_price || "0");
         const fingerprint = ethers.sha256(ethers.toUtf8Bytes(orderId + total + BLOCKCHAIN_CONFIG.SALT));
-        bcStatus.innerText = "Anchoring Order to Blockchain...";
+        bcStatus.innerText = "Anchor Order ke Blockchain...";
 
         const tx = await contract.anchorOrder(fingerprint, vendorAddr);
         
-        bcStatus.innerText = "Waiting for Sepolia Confirmation...";
+        bcStatus.innerText = "Tunggu untuk Konfirmasi Sepolia.... Mohon Tunggu disini";
         await tx.wait();
 
         // ✅ LOGIKA UPDATE DATABASE SETELAH ANCHORING SUKSES
@@ -429,7 +429,7 @@ async function anchorOrderToBlockchain(orderData) {
             console.error("Failed to update Laravel database:", dbErr);
         }
 
-        bcStatus.innerText = "";
+        bcStatus.innerText = "Tolong Foto QR Code untuk bukti transaksi";
         bcStatus.style.color = "#16a34a";
         bcHash.innerText = "Blockchain Proof: " + fingerprint;
 
