@@ -30,6 +30,12 @@ class Food extends Model
         return $this->belongsTo(Vendor::class, 'vendor_id');
     }
 
+        public function addons()
+    {
+        // Jika satu makanan memiliki banyak addon
+        return $this->hasMany(FoodAddon::class, 'food_id');
+    }
+    
 public function orders()
 {
     return $this->belongsToMany(Order::class, 'order_food', 'food_id', 'order_id')
