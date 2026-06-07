@@ -30,6 +30,8 @@
             <span class="label">Menu Pesanan:</span>
             <span class="value" id="res-items">...</span>
             
+
+
             <span class="label">No. Antrian / Total:</span>
             <span class="value" id="res-meta">...</span>
         </div>
@@ -42,7 +44,7 @@
         const RPC_URL = "https://eth-sepolia.g.alchemy.com/v2/dS-WP2eW36UzHIeWIxnoQ";
         const CONTRACT_ADDRESS = "0x269691dd5963696515612673aE89aa18d0AdA189";
         const LARAVEL_API = "https://blokchain.orderhere.dpdns.org/api/orders/by-hash/";
-        const ABI = ["function getOrderStatus(bytes32 _orderHash) external view returns (bool exists, bool isClaimed, uint256 time, address vendor)"];
+        const ABI = ["function getOrderStatus(bytes32 _orderHash) external view returns (bool exists, bool isClaimed, uint256 time, address vendor)", "function verifyAndClaim(bytes32 _orderHash) external" ];
 
         async function verifyAndFetch(scannedHash) {
             const resultBox = document.getElementById('result');
@@ -52,58 +54,41 @@
             resultBox.style.display = "block";
             title.innerText = "Verifying Blockchain...";
 
-            try {
-                // 1. STEP ONE: CHECK BLOCKCHAIN (SECURITY)
-                const provider = new ethers.JsonRpcProvider(RPC_URL);
-                const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
-                const status = await contract.getOrderStatus(scannedHash);
+   try {
+        const provider = new ethers.JsonRpcProvider(BLOCKCHAIN_CONFIG.RPC_URL);
+        // Buat wallet agar scanner bisa mengirim transaksi
+        const wallet = new ethers.Wallet(BLOCKCHAIN_CONFIG.PRIVATE_KEY, provider);
+        const contract = new ethers.Contract(BLOCKCHAIN_CONFIG.CONTRACT_ADDRESS, BLOCKCHAIN_CONFIG.ABI, wallet);
 
-                if (!status.exists) {
-                    resultBox.className = "result-box invalid";
-                    title.innerText = "❌ FAKE RECEIPT DETECTED";
-                    detailsPanel.style.display = "none";
-                    return;
-                }
-                
-                if (status.isClaimed) {
-                    resultBox.className = "result-box invalid";
-                    title.innerText = "⚠️ RECEIPT ALREADY USED";
-                    detailsPanel.style.display = "none";
-                    return;
-                }
+        const status = await contract.getOrderStatus(scannedHash);
 
-                // 2. STEP TWO: FETCH FROM LARAVEL (DATA)
-                title.innerText = "Fetching Order Details...";
-                const response = await fetch(LARAVEL_API + scannedHash);
-                const result = await response.json();
+        if (status.isClaimed) {
+            resultBox.className = "result-box invalid";
+            title.innerText = "Sudah Diklaim";
+            detailsPanel.style.display = "none";
+            return; // Berhenti di sini jika sudah pernah diklaim
+        }
 
-if (result.success) {
-    const d = result.data; // Singkatan agar kode lebih pendek
-    
-    resultBox.className = "result-box valid";
-    title.innerText = "✅ VALID & VERIFIED";
-    detailsPanel.style.display = "block";
-    
-    // 1. LOGIKA UNTUK MENU PESANAN (Mendukung format 'items' atau 'foods')
-    let menuText = "";
-    if (d.items) {
-        menuText = d.items; // Jika sudah diproses di Controller
-    } else if (d.foods && Array.isArray(d.foods)) {
-        // Jika masih format mentah Laravel, kita olah di sini
-        menuText = d.foods.map(f => {
-            const q = f.pivot ? f.pivot.quantity : 1;
-            return q + "x " + f.name;
-        }).join(", ");
-    }
-    document.getElementById('res-items').innerText = menuText || "Menu tidak terbaca";
+        // Jika valid dan belum diklaim, ambil data Laravel
+        const response = await fetch(LARAVEL_API + scannedHash);
+        const result = await response.json();
 
-    // 2. LOGIKA UNTUK CATATAN (Mendukung 'notes' atau 'notes_order')
-    document.getElementById('res-notes').innerText = d.notes || d.notes_order || "Tidak ada catatan";
+        if (result.success) {
+            resultBox.className = "result-box valid";
+            title.innerText = "Valid dan Terverifikasi";
+            detailsPanel.style.display = "block";
+            
+            // Tampilkan data...
+            document.getElementById('res-items').innerText = result.data.items;
 
-    // 3. LOGIKA UNTUK ANTRIAN & HARGA
-    document.getElementById('res-meta').innerText = `Antrian #${d.queue_number} | Rp ${d.total_price}`;
-}
-
+            // --- PROSES CLAIM (MENGHANGUSKAN QR) ---
+            title.innerText = "Diklaim... Tunggu Konfirmasi Blockchain";
+            const tx = await contract.verifyAndClaim(scannedHash);
+            await tx.wait(); // Tunggu konfirmasi blockchain
+            
+            title.innerText = "Diklaim dan Hangus!";
+            console.log("QR Code ini sekarang hangus di Blockchain.");
+        }
             } catch (err) {
                 title.innerText = "System Error: " + err.message;
             }
