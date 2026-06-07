@@ -10,7 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Facades\Log; // ✅ FIX 1: Tambahkan import Log
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class FoodController extends Controller
@@ -25,7 +25,7 @@ class FoodController extends Controller
             $query = Food::with(['vendor', 'addons.addon']);
 
             if ($request->filled('vendor_id')) {
-                $query->where('vendor_id', $request->input('vendor_id')); // ✅ FIX 2: get() -> input()
+                $query->where('vendor_id', $request->input('vendor_id'));
             }
             if ($request->filled('type')) {
                 $query->where('type', $request->input('type'));
@@ -53,7 +53,7 @@ class FoodController extends Controller
             ], 200);
 
         } catch (QueryException $e) {
-            Log::error('Food index failed:', ['error' => $e->getMessage()]); // ✅ FIX 3: Gunakan Log::
+            Log::error('Food index failed:', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Database error occurred.',
@@ -77,7 +77,7 @@ class FoodController extends Controller
     {
         try {
             if (!\App\Models\Vendor::where('id', $vendorId)->exists()) {
-                 return response()->json([
+                return response()->json([
                     'success' => false,
                     'message' => 'Vendor not found.',
                 ], 404);
@@ -136,19 +136,42 @@ class FoodController extends Controller
         try {
             $validated = $request->validate([
                 'name'             => ['required', 'string', 'max:45', 'unique:food,name'],
-                'type'             => ['required', Rule::in(['FOOD', 'DRINK', 'SNACK', 'PRASMANAN'])],
+                // ✅ FIX: ENUM value sesuai database
+                'type'             => ['required', Rule::in(['KARBO', 'MINUMAN', 'SAYUR', 'LAINNYA', 'SNACK', 'LAUK'])],
                 'price'            => ['required', 'numeric', 'min:0'],
                 'description'      => ['nullable', 'string', 'max:255'],
                 'image'            => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:2048'],
                 'estimated_time'   => ['required', 'integer', 'min:1'],
                 'flavor_attribute' => ['nullable', Rule::in(['SENANG', 'SEDIH', 'MARAH', 'DATAR'])],
-                'active'           => ['nullable', 'boolean'],
+                // ✅ TAMBAH: Validasi field taste
+                'Manis'            => ['nullable', 'integer', 'min:0', 'max:10'],
+                'Pahit'            => ['nullable', 'integer', 'min:0', 'max:10'],
+                'Asin'             => ['nullable', 'integer', 'min:0', 'max:10'],
+                'Asam'             => ['nullable', 'integer', 'min:0', 'max:10'],
+                'Pedas'            => ['nullable', 'integer', 'min:0', 'max:10'],
+                'active'           => ['nullable'],
             ]);
 
+            // ✅ FIX: Normalisasi boolean 'active'
+            if (isset($validated['active'])) {
+                $validated['active'] = filter_var($validated['active'], FILTER_VALIDATE_BOOLEAN);
+            } else {
+                $validated['active'] = true; // Default aktif
+            }
+
+            // ✅ FIX: Set default taste ke 0 jika tidak diisi
+            $validated['Manis'] = $validated['Manis'] ?? 0;
+            $validated['Pahit'] = $validated['Pahit'] ?? 0;
+            $validated['Asin'] = $validated['Asin'] ?? 0;
+            $validated['Asam'] = $validated['Asam'] ?? 0;
+            $validated['Pedas'] = $validated['Pedas'] ?? 0;
+
+            // ✅ Upload image jika ada
             if ($request->hasFile('image')) {
                 $validated['image'] = $request->file('image')->store('foods', 'public');
             }
 
+            // ✅ Set vendor_id dari user yang login
             $validated['vendor_id'] = $request->user()->id;
 
             $food = Food::create($validated);
@@ -230,17 +253,26 @@ class FoodController extends Controller
 
             $validated = $request->validate([
                 'name'             => ['nullable', 'string', 'max:45', Rule::unique('food', 'name')->ignore($food->id)],
-                'type'             => ['nullable', Rule::in(['FOOD', 'DRINK', 'SNACK', 'PRASMANAN'])],
+                // ✅ FIX: ENUM value sesuai database
+                'type'             => ['nullable', Rule::in(['KARBO', 'MINUMAN', 'SAYUR', 'LAINNYA', 'SNACK', 'LAUK'])],
                 'price'            => ['nullable', 'numeric', 'min:0'],
                 'description'      => ['nullable', 'string', 'max:255'],
                 'image'            => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:2048'],
                 'estimated_time'   => ['nullable', 'integer', 'min:1'],
                 'flavor_attribute' => ['nullable', Rule::in(['SENANG', 'SEDIH', 'MARAH', 'DATAR'])],
-                'active'           => ['nullable', 'boolean'],
+                // ✅ TAMBAH: Validasi field taste
+                'Manis'            => ['nullable', 'integer', 'min:0', 'max:10'],
+                'Pahit'            => ['nullable', 'integer', 'min:0', 'max:10'],
+                'Asin'             => ['nullable', 'integer', 'min:0', 'max:10'],
+                'Asam'             => ['nullable', 'integer', 'min:0', 'max:10'],
+                'Pedas'            => ['nullable', 'integer', 'min:0', 'max:10'],
+                'active'           => ['nullable'],
             ]);
 
+            // ✅ Filter null values
             $updates = array_filter($validated, fn($v) => $v !== null && $v !== '');
 
+            // ✅ Upload image jika ada
             if ($request->hasFile('image')) {
                 if ($food->image && Storage::disk('public')->exists($food->image)) {
                     Storage::disk('public')->delete($food->image);
@@ -248,11 +280,12 @@ class FoodController extends Controller
                 $updates['image'] = $request->file('image')->store('foods', 'public');
             }
 
+            // ✅ Normalisasi boolean 'active'
             if (array_key_exists('active', $updates)) {
                 $val = $updates['active'];
                 $updates['active'] = match (strtolower(strval($val))) {
-                    'true', '1', 1 => true,
-                    'false', '0', 0 => false,
+                    'true', '1', 1, 'on' => true,
+                    'false', '0', 0, 'off' => false,
                     default => filter_var($val, FILTER_VALIDATE_BOOLEAN),
                 };
             }
