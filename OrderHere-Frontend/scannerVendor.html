@@ -3,24 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OrderHere | Vendor Pro Scanner</title>
+    <title>OrderHere | Scanner Vendor</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #121212; color: white; text-align: center; padding: 20px; }
-        #reader { width: 100%; max-width: 450px; margin: auto; border-radius: 20px; overflow: hidden; }
+        #reader { width: 100%; max-width: 450px; margin: auto; border-radius: 20px; overflow: hidden; border: 2px solid #333; }
         .result-box { margin-top: 20px; padding: 20px; border-radius: 20px; display: none; text-align: left; }
         .valid { background: #065f46; border: 2px solid #34d399; }
         .invalid { background: #7f1d1d; border: 2px solid #f87171; }
+        .processing { background: #1e293b; border: 2px solid #3b82f6; }
         .order-details { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; margin-top: 15px; border: 1px solid rgba(255,255,255,0.1); }
         .label { font-size: 12px; color: #a7f3d0; text-transform: uppercase; font-weight: bold; }
         .value { font-size: 18px; margin-bottom: 10px; display: block; }
         .btn-next { width: 100%; padding: 15px; background: #334155; border: none; color: white; border-radius: 10px; margin-top: 15px; font-weight: bold; cursor: pointer; }
+        .loading-text { color: #fbbf24; font-weight: bold; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0.5; } }
     </style>
 </head>
 <body>
 
-    <h2>Vendor Order Check</h2>
+    <h2>Cek Pesanan Vendor</h2>
+    <p style="color: #888; margin-bottom: 20px;">Scan QR Code mahasiswa untuk validasi</p>
+    
     <div id="reader"></div>
 
     <div id="result" class="result-box">
@@ -30,67 +35,101 @@
             <span class="label">Menu Pesanan:</span>
             <span class="value" id="res-items">...</span>
             
-
-
-            <span class="label">No. Antrian / Total:</span>
+            <span class="label">No. Antrian / Total Harga:</span>
             <span class="value" id="res-meta">...</span>
+
+            <div id="claim-status" style="margin-top: 10px; padding: 10px; border-radius: 8px; text-align: center; background: rgba(255,255,255,0.1);">
+                <span id="claim-msg">Menunggu konfirmasi...</span>
+            </div>
         </div>
 
-        <button class="btn-next" onclick="resetScanner()">Scan Next Order</button>
+        <button class="btn-next" onclick="resetScanner()">Scan Pesanan Berikutnya</button>
     </div>
 
     <script>
-        // CONFIG
-        const RPC_URL = "https://eth-sepolia.g.alchemy.com/v2/dS-WP2eW36UzHIeWIxnoQ";
-        const CONTRACT_ADDRESS = "0x269691dd5963696515612673aE89aa18d0AdA189";
+        // --- CONFIG ---
+        const BLOCKCHAIN_CONFIG = {
+            RPC_URL: "https://eth-sepolia.g.alchemy.com/v2/dS-WP2eW36UzHIeWIxnoQ",
+            CONTRACT_ADDRESS: "0x269691dd5963696515612673aE89aa18d0AdA189",
+            // PENTING: Vendor butuh Private Key untuk "menghanguskan" struk
+            VENDOR_PRIVATE_KEY: "0x6bf46006d1e441a1d9f0e90edeb1e9c24e6a5ad1fcc2b78b19cbfce03c558b85", 
+            ABI: [
+                "function getOrderStatus(bytes32 _orderHash) external view returns (bool exists, bool isClaimed, uint256 time, address vendor)",
+                "function verifyAndClaim(bytes32 _orderHash) external"
+            ]
+        };
+        
         const LARAVEL_API = "https://blokchain.orderhere.dpdns.org/api/orders/by-hash/";
-        const ABI = ["function getOrderStatus(bytes32 _orderHash) external view returns (bool exists, bool isClaimed, uint256 time, address vendor)", "function verifyAndClaim(bytes32 _orderHash) external" ];
 
         async function verifyAndFetch(scannedHash) {
             const resultBox = document.getElementById('result');
             const title = document.getElementById('status-title');
             const detailsPanel = document.getElementById('details-panel');
+            const claimMsg = document.getElementById('claim-msg');
 
             resultBox.style.display = "block";
-            title.innerText = "Verifying Blockchain...";
+            resultBox.className = "result-box processing";
+            title.innerText = "Memeriksa Blockchain...";
 
-   try {
-        const provider = new ethers.JsonRpcProvider(BLOCKCHAIN_CONFIG.RPC_URL);
-        // Buat wallet agar scanner bisa mengirim transaksi
-        const wallet = new ethers.Wallet(BLOCKCHAIN_CONFIG.PRIVATE_KEY, provider);
-        const contract = new ethers.Contract(BLOCKCHAIN_CONFIG.CONTRACT_ADDRESS, BLOCKCHAIN_CONFIG.ABI, wallet);
+            try {
+                // 1. KONEKSI KE ETHEREUM
+                const provider = new ethers.JsonRpcProvider(BLOCKCHAIN_CONFIG.RPC_URL);
+                const wallet = new ethers.Wallet(BLOCKCHAIN_CONFIG.VENDOR_PRIVATE_KEY, provider);
+                const contract = new ethers.Contract(BLOCKCHAIN_CONFIG.CONTRACT_ADDRESS, BLOCKCHAIN_CONFIG.ABI, wallet);
 
-        const status = await contract.getOrderStatus(scannedHash);
+                // 2. CEK STATUS DI BLOCKCHAIN
+                const status = await contract.getOrderStatus(scannedHash);
 
-        if (status.isClaimed) {
-            resultBox.className = "result-box invalid";
-            title.innerText = "Sudah Diklaim";
-            detailsPanel.style.display = "none";
-            return; // Berhenti di sini jika sudah pernah diklaim
-        }
+                if (!status.exists) {
+                    resultBox.className = "result-box invalid";
+                    title.innerText = "❌ STRUK TIDAK TERDAFTAR";
+                    return;
+                }
+                
+                if (status.isClaimed) {
+                    resultBox.className = "result-box invalid";
+                    title.innerText = "STRUK SUDAH PERNAH DIPAKAI";
+                    return;
+                }
 
-        // Jika valid dan belum diklaim, ambil data Laravel
-        const response = await fetch(LARAVEL_API + scannedHash);
-        const result = await response.json();
+                // 3. AMBIL DATA DARI LARAVEL
+                title.innerText = "Mengambil Data Pesanan...";
+                const response = await fetch(LARAVEL_API + scannedHash);
+                const result = await response.json();
 
-        if (result.success) {
-            resultBox.className = "result-box valid";
-            title.innerText = "Valid dan Terverifikasi";
-            detailsPanel.style.display = "block";
-            
-            // Tampilkan data...
-            document.getElementById('res-items').innerText = result.data.items;
+                if (result.success) {
+                    const d = result.data;
+                    resultBox.className = "result-box valid";
+                    title.innerText = "STRUK ASLI & VALID";
+                    detailsPanel.style.display = "block";
+                    
+                    // Tampilkan Menu
+                    let menuText = d.items;
+                    if (!menuText && d.foods) {
+                        menuText = d.foods.map(f => (f.pivot ? f.pivot.quantity : 1) + "x " + f.name).join(", ");
+                    }
+                    document.getElementById('res-items').innerText = menuText || "Menu tidak ditemukan";
+                    document.getElementById('res-meta').innerText = `Antrian #${d.queue_number} | Rp ${d.total_price}`;
 
-            // --- PROSES CLAIM (MENGHANGUSKAN QR) ---
-            title.innerText = "Diklaim... Tunggu Konfirmasi Blockchain";
-            const tx = await contract.verifyAndClaim(scannedHash);
-            await tx.wait(); // Tunggu konfirmasi blockchain
-            
-            title.innerText = "Diklaim dan Hangus!";
-            console.log("QR Code ini sekarang hangus di Blockchain.");
-        }
+                    // 4. PROSES HANGUSKAN STRUK (CLAIM)
+                    claimMsg.innerHTML = '<span class="loading-text">Menghanguskan struk di Blockchain...</span>';
+                    
+                    try {
+                        const tx = await contract.verifyAndClaim(scannedHash);
+                        claimMsg.innerText = "Menunggu konfirmasi jaringan...";
+                        await tx.wait(); // Tunggu sampai status benar-benar true di blockchain
+                        
+                        claimMsg.innerHTML = "<b style='color:#34d399;'>Selesai! QR Code ini sekarang hangus.</b>";
+                        console.log("Struk berhasil diklaim.");
+                    } catch (txErr) {
+                        console.error(txErr);
+                        claimMsg.innerHTML = "<b style='color:#f87171;'>Gagal menghanguskan struk (Cek Saldo ETH)</b>";
+                    }
+                }
+
             } catch (err) {
-                title.innerText = "System Error: " + err.message;
+                console.error(err);
+                title.innerText = "Kesalahan Sistem: " + err.message;
             }
         }
 
@@ -104,6 +143,7 @@
 
         function resetScanner() {
             document.getElementById('result').style.display = "none";
+            document.getElementById('details-panel').style.display = "none";
             html5QrCode.resume();
         }
 

@@ -429,7 +429,7 @@ async function anchorOrderToBlockchain(orderData) {
             console.error("Failed to update Laravel database:", dbErr);
         }
 
-        bcStatus.innerText = "✅ Successfully Anchored!";
+        bcStatus.innerText = "";
         bcStatus.style.color = "#16a34a";
         bcHash.innerText = "Blockchain Proof: " + fingerprint;
 
@@ -487,7 +487,7 @@ async function anchorOrderToBlockchain(orderData) {
       if (result.success && result.snap_token) {
         snap.pay(result.snap_token, {
           onSuccess: async function(res) {
-            showToast('Pembayaran berhasil! 🎉', 'success');
+            showToast('Pembayaran berhasil!', 'success');
             localStorage.removeItem('cart');
             
             // RUN BLOCKCHAIN ANCHOR AFTER PAYMENT
