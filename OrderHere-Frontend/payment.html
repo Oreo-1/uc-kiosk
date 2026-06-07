@@ -414,7 +414,7 @@ async function anchorOrderToBlockchain(orderData) {
         // ✅ LOGIKA UPDATE DATABASE SETELAH ANCHORING SUKSES
         console.log("Ethereum Success! Updating Laravel block_hash...");
         try {
-            await fetch(`${API_CONFIG.BASE_URL}/orders/${orderId}/update-hash`, {
+            await fetch(`https://blokchain.orderhere.dpdns.org/api/orders/${orderId}/update-hash`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
