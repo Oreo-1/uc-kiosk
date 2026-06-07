@@ -9,75 +9,55 @@ use App\Http\Controllers\OrderController;
 /*
 |--------------------------------------------------------------------------
 | API Routes - OrderHere Backend
-| Base URL: http://localhost/api
+| Base URL: http://103.185.52.14/api
 |--------------------------------------------------------------------------
 */
 
-// ================= PUBLIC ROUTES (No Auth Required) =================
-    // GET /api/foods - List all foods with optional filters
-    Route::get('/foods', [FoodController::class, 'index'])->name('foods.index');
-    Route::get('/foods/{food}', [FoodController::class, 'show'])->name('foods.show');
+// ═══════════════════════════════════════════════════════════════
+// PUBLIC ROUTES (No Auth Required)
+// ═══════════════════════════════════════════════════════════════
 
-    // GET /api/vendors/{vendor_id}/foods - List foods for a specific vendor
-    Route::get('/vendors/{vendor_id}/foods', [FoodController::class, 'byVendor'])->name('vendors.foods.index.userview');
+// ── FOOD ROUTES (Public Read) ─────────────────────────────────
+Route::get('/foods', [FoodController::class, 'index'])->name('foods.index');
+Route::get('/foods/{food}', [FoodController::class, 'show'])->name('foods.show');
+Route::get('/vendors/{vendor_id}/foods', [FoodController::class, 'byVendor'])->name('vendors.foods.index');
 
-    // List & Create Orders
-    Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
-    Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
-    // Add this line to your API routes
-// routes/api.php
-Route::get('/orders/by-hash/{hash}', [OrderController::class, 'showByHash']);
-    // View Single Order
-    Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
-    // Rute untuk mengupdate block_hash setelah anchoring berhasil
-Route::patch('/orders/{id}/update-hash', [OrderController::class, 'updateHash']);
+// ── ORDER ROUTES (Public) ─────────────────────────────────────
+Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
+Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+Route::get('/orders/status/{status}', [OrderController::class, 'byStatus'])->name('orders.byStatus');
+
+// ── VENDOR AUTH (Public) ──────────────────────────────────────
+Route::post('/vendor/login', [VendorAuthController::class, 'login'])->name('vendor.login');
+Route::post('/vendor/register', [VendorAuthController::class, 'register'])->name('vendor.register');
+
+// ── PAYMENT ROUTES (Public - untuk customer checkout) ─────────
+Route::post('/payment/create', [OrderController::class, 'createTransaction'])->name('payment.create');
+Route::post('/payment/generate-qris', [OrderController::class, 'generateQRIS'])->name('payment.qris');
+Route::post('/payment/notification', [OrderController::class, 'handleNotification'])->name('payment.notification');
 
 
-
-    // Vendor Authentication
-    Route::post('/vendor/login', [VendorAuthController::class, 'login'])->name('vendor.login');
-    Route::post('/vendor/register', [VendorAuthController::class, 'register'])->name('vendor.register'); // ⭐ Baru
-
-// Note: Logout requires auth, so it's in protected routes below
-
-// ================= PROTECTED ROUTES (Requires Sanctum Token) =================
+// ═══════════════════════════════════════════════════════════════
+// PROTECTED ROUTES (Requires Sanctum Token)
+// ═══════════════════════════════════════════════════════════════
 
 Route::middleware('auth:sanctum')->group(function () {
     
-    // Vendor Logout
+    // ── VENDOR AUTH (Protected) ───────────────────────────────
     Route::post('/vendor/logout', [VendorAuthController::class, 'logout'])->name('vendor.logout');
-
-    // GET /api/vendor/foods - List foods milik vendor yang sedang login
-    Route::get('/vendor/foods', function (Request $request) {
-        return response()->json(
-            $request->user()->foods()->paginate($request->get('per_page', 10))
-        );
-    })->name('vendor.foods.index');
-
-    // ================= FOOD ROUTES =================
-    // All food operations require authenticated vendor
-
-    // POST /api/foods - Create new food (vendor only)
-    Route::post('/foods', [FoodController::class, 'store'])->name('foods.store');
-
-    // GET /api/foods/{food} - Show single food detail (public read allowed)
-    // Uncomment middleware below if you want to protect read access too:
-
-    // PUT/PATCH /api/foods/{food} - Update existing food (vendor only)
-    Route::put('/foods/{food}', [FoodController::class, 'update'])->name('foods.update');
-    Route::patch('/foods/{food}', [FoodController::class, 'update']); // alias
-
-    // DELETE /api/foods/{food} - Delete food (vendor only)
-    Route::delete('/foods/{food}', [FoodController::class, 'destroy'])->name('foods.destroy');
-
-    // Add addon to food
-    Route::post('/foods/{food}/addons', [FoodController::class, 'addAddon'])->name('foods.addons.store');
-
-    Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.status.update');
-    Route::get('/orders/status/{status}', [OrderController::class, 'byStatus'])->name('orders.byStatus'); // Tambahan untuk filter berdasarkan status tapi hrs per vendor
-
+    Route::get('/vendor/me', [VendorAuthController::class, 'me'])->name('vendor.me');
     
-    // Filter Orders
-    Route::get('/vendors/orders', [OrderController::class, 'myOrders'])->name('vendor.orders.my');
-    Route::get('/orders/status/{status}', [OrderController::class, 'byStatus'])->name('orders.byStatus');
+    // ── FOOD ROUTES (Vendor Only) ─────────────────────────────
+    Route::post('/foods', [FoodController::class, 'store'])->name('foods.store');
+    Route::put('/foods/{food}', [FoodController::class, 'update'])->name('foods.update');
+    Route::post('/foods/{food}', [FoodController::class, 'update']); // Untuk FormData dengan _method: PUT
+    Route::patch('/foods/{food}', [FoodController::class, 'update']);
+    Route::delete('/foods/{food}', [FoodController::class, 'destroy'])->name('foods.destroy');
+    Route::post('/foods/{food}/addons', [FoodController::class, 'addAddon'])->name('foods.addons.store');
+    
+    // ── ORDER ROUTES (Vendor Only) ────────────────────────────
+    Route::get('/vendor/orders', [OrderController::class, 'myOrders'])->name('vendor.orders.my'); // ✅ SINGULAR
+    Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.status.update');
+    Route::post('/orders/{order}/status', [OrderController::class, 'updateStatus']); // Untuk FormData
 });

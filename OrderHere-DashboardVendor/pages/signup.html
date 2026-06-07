@@ -138,10 +138,16 @@
         font-weight: 700;
         cursor: pointer;
         margin-top: 10px;
+        transition: opacity 0.2s;
       }
 
       .btn:hover {
         opacity: 0.9;
+      }
+
+      .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
       }
 
       .switch-text {
@@ -154,6 +160,38 @@
         color: #ff7a2f;
         text-decoration: none;
         font-weight: 700;
+      }
+
+      /* ✅ TAMBAHAN: Error & Success Message Styling */
+      .error-message {
+        background: #fee2e2;
+        color: #dc2626;
+        padding: 12px;
+        border-radius: 10px;
+        margin-bottom: 15px;
+        font-size: 13px;
+        display: none;
+        border-left: 4px solid #dc2626;
+        white-space: pre-line;
+      }
+
+      .error-message.show {
+        display: block;
+      }
+
+      .success-message {
+        background: #d1fae5;
+        color: #059669;
+        padding: 12px;
+        border-radius: 10px;
+        margin-bottom: 15px;
+        font-size: 13px;
+        display: none;
+        border-left: 4px solid #059669;
+      }
+
+      .success-message.show {
+        display: block;
       }
 
       @media (max-width: 768px) {
@@ -196,22 +234,26 @@
             Create your new account
           </div>
 
-          <form>
+          <!-- ✅ TAMBAHAN: Error & Success Message -->
+          <div class="error-message" id="errorMsg"></div>
+          <div class="success-message" id="successMsg"></div>
+
+          <form id="signupForm">
             <div class="input-group">
-              <label>Nama Lengkap</label>
+              <label>Nama Vendor</label>
 
               <div class="input-box">
                 <i class="fa fa-user"></i>
-                <input type="text" placeholder="Masukkan nama lengkap" />
+                <input type="text" id="nameInput" placeholder="Masukkan nama vendor" required />
               </div>
             </div>
 
             <div class="input-group">
-              <label>Email</label>
+              <label>Nomor Telepon</label>
 
               <div class="input-box">
-                <i class="fa fa-envelope"></i>
-                <input type="email" placeholder="Masukkan email" />
+                <i class="fa fa-phone"></i>
+                <input type="tel" id="phoneInput" placeholder="Masukkan nomor telepon" required />
               </div>
             </div>
 
@@ -220,7 +262,7 @@
 
               <div class="input-box">
                 <i class="fa fa-lock"></i>
-                <input type="password" placeholder="Masukkan password" />
+                <input type="password" id="passwordInput" placeholder="Masukkan password" required />
               </div>
             </div>
 
@@ -231,12 +273,14 @@
                 <i class="fa fa-lock"></i>
                 <input
                   type="password"
+                  id="confirmPasswordInput"
                   placeholder="Konfirmasi password"
+                  required
                 />
               </div>
             </div>
 
-            <button class="btn">Create Account</button>
+            <button type="submit" class="btn" id="signupBtn">Create Account</button>
           </form>
 
           <div class="switch-text">
@@ -246,5 +290,140 @@
         </div>
       </div>
     </div>
+
+    <!-- Load config.js terlebih dahulu -->
+    <script src="../js/config.js"></script>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Jika sudah login, langsung redirect ke dashboard
+        if (isAuthenticated()) {
+            window.location.href = '../index.html';
+            return;
+        }
+
+        const form = document.getElementById('signupForm');
+        const nameInput = document.getElementById('nameInput');
+        const phoneInput = document.getElementById('phoneInput');
+        const passwordInput = document.getElementById('passwordInput');
+        const confirmPasswordInput = document.getElementById('confirmPasswordInput');
+        const signupBtn = document.getElementById('signupBtn');
+        const errorMsg = document.getElementById('errorMsg');
+        const successMsg = document.getElementById('successMsg');
+
+        // Helper untuk tampilkan error
+        function showError(message) {
+            errorMsg.textContent = message;
+            errorMsg.classList.add('show');
+            successMsg.classList.remove('show');
+        }
+
+        // Helper untuk tampilkan success
+        function showSuccess(message) {
+            successMsg.textContent = message;
+            successMsg.classList.add('show');
+            errorMsg.classList.remove('show');
+        }
+
+        // Helper untuk sembunyikan semua pesan
+        function hideMessages() {
+            errorMsg.classList.remove('show');
+            successMsg.classList.remove('show');
+        }
+
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            hideMessages();
+            
+            const name = nameInput.value.trim();
+            const phone_number = phoneInput.value.trim();
+            const password = passwordInput.value;
+            const confirmPassword = confirmPasswordInput.value;
+
+            // Validasi client-side
+            if (!name || !phone_number || !password || !confirmPassword) {
+                showError('Mohon isi semua field!');
+                return;
+            }
+
+            if (password.length < 6) {
+                showError('Password minimal 6 karakter!');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showError('Password tidak cocok!');
+                return;
+            }
+
+            // Validasi format nomor telepon (opsional)
+            const phoneRegex = /^[0-9+\-\s()]{8,20}$/;
+            if (!phoneRegex.test(phone_number)) {
+                showError('Format nomor telepon tidak valid!');
+                return;
+            }
+
+            // Disable button & tampilkan loading
+            signupBtn.disabled = true;
+            const originalText = signupBtn.innerText;
+            signupBtn.innerText = 'Memproses...';
+
+            try {
+                // Panggil endpoint register
+                const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.REGISTER}`, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        phone_number: phone_number,
+                        password: password
+                    })
+                });
+
+                const data = await response.json();
+
+                // ✅ PERBAIKAN: Validasi response lebih ketat
+                if (response.ok && data.success && data.data && data.data.token) {
+                    // Simpan token & data vendor ke localStorage
+                    setToken(data.data.token);
+                    setVendorData(data.data.vendor);
+                    
+                    showSuccess('Registrasi berhasil! Selamat datang di Chick on Cup. Mengalihkan...');
+                    
+                    // Redirect ke dashboard setelah 1.5 detik
+                    setTimeout(() => {
+                        window.location.href = '../index.html';
+                    }, 1500);
+                } else {
+                    // Tampilkan error dari backend
+                    if (data.errors) {
+                        // Format validation errors dengan rapi
+                        const errorMessages = Object.values(data.errors).flat().join('\n');
+                        showError(errorMessages);
+                    } else {
+                        showError(data.message || 'Registrasi gagal! Silakan coba lagi.');
+                    }
+                    console.error('Register failed:', data);
+                }
+            } catch (error) {
+                console.error('Register error:', error);
+                showError('Terjadi kesalahan koneksi. Pastikan backend sudah berjalan.');
+            } finally {
+                // Kembalikan button ke state semula
+                signupBtn.disabled = false;
+                signupBtn.innerText = originalText;
+            }
+        });
+
+        // ✅ TAMBAHAN: Clear error saat user mulai mengetik
+        nameInput.addEventListener('input', hideMessages);
+        phoneInput.addEventListener('input', hideMessages);
+        passwordInput.addEventListener('input', hideMessages);
+        confirmPasswordInput.addEventListener('input', hideMessages);
+    });
+    </script>
   </body>
 </html>
