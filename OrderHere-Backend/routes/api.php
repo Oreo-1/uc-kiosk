@@ -29,6 +29,8 @@ use App\Http\Controllers\OrderController;
 Route::get('/orders/by-hash/{hash}', [OrderController::class, 'showByHash']);
     // View Single Order
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+    // Rute untuk mengupdate block_hash setelah anchoring berhasil
+Route::patch('/orders/{id}/update-hash', [OrderController::class, 'updateHash']);
 
 
 

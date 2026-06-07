@@ -383,16 +383,14 @@ async function anchorOrderToBlockchain(orderData) {
     const bcHash = document.getElementById('bc-hash');
 
     try {
-        // --- MEMBERSIHKAN ALAMAT DARI SPASI/TYPO ---
         const cleanContractAddr = BLOCKCHAIN_CONFIG.CONTRACT_ADDRESS.trim();
-        const vendorAddr = "0x358851457a52C42B802C7811Ff92C23CF3D27423".trim(); // Pakai alamat Metamask Anda
+        const vendorAddr = "0x358851457a52C42B802C7811Ff92C23CF3D27423".trim(); 
 
-        // --- VALIDASI FORMAT ---
         if (!ethers.isAddress(cleanContractAddr)) {
-            throw new Error("ALAMAT KONTRAK TIDAK VALID! Pastikan diawali 0x dan copy ulang dari Remix.");
+            throw new Error("ALAMAT KONTRAK TIDAK VALID!");
         }
         if (!ethers.isAddress(vendorAddr)) {
-            throw new Error("ALAMAT VENDOR TIDAK VALID! Pastikan alamat wallet Metamask Anda benar.");
+            throw new Error("ALAMAT VENDOR TIDAK VALID!");
         }
 
         document.getElementById('blockchainReceipt').style.display = "block";
@@ -401,27 +399,40 @@ async function anchorOrderToBlockchain(orderData) {
         const provider = new ethers.JsonRpcProvider(BLOCKCHAIN_CONFIG.RPC_URL);
         const wallet = new ethers.Wallet(BLOCKCHAIN_CONFIG.PRIVATE_KEY, provider);
         
-        // Inisialisasi Kontrak
         const contract = new ethers.Contract(cleanContractAddr, BLOCKCHAIN_CONFIG.ABI, wallet);
 
-        // Buat Fingerprint (Hash)
         const orderId = String(orderData.id || "0");
         const total = String(orderData.total_price || "0");
         const fingerprint = ethers.sha256(ethers.toUtf8Bytes(orderId + total + BLOCKCHAIN_CONFIG.SALT));
         bcStatus.innerText = "Anchoring Order to Blockchain...";
 
-        // --- EKSEKUSI TRANSAKSI ---
-        // Pastikan fungsi di smart contract Anda adalah 'anchorOrder'
         const tx = await contract.anchorOrder(fingerprint, vendorAddr);
         
         bcStatus.innerText = "Waiting for Sepolia Confirmation...";
         await tx.wait();
 
+        // ✅ LOGIKA UPDATE DATABASE SETELAH ANCHORING SUKSES
+        console.log("Ethereum Success! Updating Laravel block_hash...");
+        try {
+            await fetch(`${API_CONFIG.BASE_URL}/orders/${orderId}/update-hash`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    block_hash: fingerprint
+                })
+            });
+            console.log("Laravel database updated.");
+        } catch (dbErr) {
+            console.error("Failed to update Laravel database:", dbErr);
+        }
+
         bcStatus.innerText = "✅ Successfully Anchored!";
         bcStatus.style.color = "#16a34a";
         bcHash.innerText = "Blockchain Proof: " + fingerprint;
 
-        // Render QR
         new QRCode(document.getElementById("bc-qrcode"), {
             text: fingerprint,
             width: 160,
@@ -434,8 +445,6 @@ async function anchorOrderToBlockchain(orderData) {
         bcStatus.style.color = "red";
     }
 }
-
-
 
   // ✅ CREATE MIDTRANS TRANSACTION (UNTUK POPUP)
   async function createMidtransTransaction(orderData) {

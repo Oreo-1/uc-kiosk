@@ -617,4 +617,24 @@ public function showByHash($hash)
         'data' => $order
     ], 200);
 }
+
+public function updateHash(Request $request, $id)
+{
+    try {
+        $order = \App\Models\Order::findOrFail($id);
+        
+        // Update kolom block_hash
+        $order->update([
+            'block_hash' => $request->block_hash
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Database updated with blockchain hash'
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+    }
+}
+
 }
