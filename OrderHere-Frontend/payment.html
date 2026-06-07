@@ -406,7 +406,13 @@ async function anchorOrderToBlockchain(orderData) {
         const fingerprint = ethers.sha256(ethers.toUtf8Bytes(orderId + total + BLOCKCHAIN_CONFIG.SALT));
         bcStatus.innerText = "Anchor Order ke Blockchain...";
 
+        console.log("1. Mencoba kirim transaksi...");
         const tx = await contract.anchorOrder(fingerprint, vendorAddr);
+        console.log("2. Transaksi terkirim! Hash:", tx.hash);
+
+        console.log("3. Menunggu konfirmasi blok...");
+        const receipt = await tx.wait(1); // Tambahkan angka 1 agar hanya menunggu 1 konfirmasi
+        console.log("4. Konfirmasi diterima!", receipt);
         
         bcStatus.innerText = "Tunggu untuk Konfirmasi Sepolia.... Mohon Tunggu disini";
         await tx.wait();
