@@ -553,33 +553,42 @@ class OrderController extends Controller
         }
     }
 
-    public function getByHash($hash)
-    {
-        try {
-            $order = \App\Models\Order::where('blockchain_hash', $hash)
-                ->with(['foods', 'vendor'])
-                ->first();
+public function getByHash($hash)
+{
+    try {
+        // Cari order berdasarkan hash (pastikan kolomnya blockchain_hash)
+        $order = \App\Models\Order::where('blockchain_hash', $hash)
+            ->with(['foods'])
+            ->first();
 
-            if (!$order) {
-                return response()->json(['success' => false, 'message' => 'Hash tidak ditemukan di database.'], 404);
-            }
-
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'id' => $order->id,
-                    'total_price' => $order->total_price,
-                    'notes' => $order->notes_order,
-                    'queue_number' => $order->queue_number,
-                    'items' => $order->foods->map(function($f) {
-                        return $f->pivot->quantity . "x " . $f->name;
-                    })->implode(', ')
-                ]
-            ]);
-        } catch (\Throwable $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        if (!$order) {
+            return response()->json(['success' => false, 'message' => 'Hash tidak ditemukan'], 404);
         }
+
+        // --- PROSES MAPPING DATA ---
+        
+        // 1. Ubah array 'foods' menjadi string 'items' yang rapi
+        // Contoh: "1x Mie jawa, 2x Es Teh"
+        $itemsString = $order->foods->map(function($f) {
+            $qty = $f->pivot->quantity ?? 1;
+            return $qty . "x " . $f->name;
+        })->implode(', ');
+
+        // 2. Kirim JSON dengan format yang diminta scanner
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'items'        => $itemsString,                 // <--- JavaScript panggil ini
+                'notes'        => $order->notes_order ?? '-',   // <--- JavaScript panggil ini
+                'queue_number' => $order->queue_number,
+                'total_price'  => number_format($order->total_price, 0, ',', '.')
+            ]
+        ]);
+
+    } catch (\Throwable $e) {
+        return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
     }
+}
 
 // app/Http/Controllers/OrderController.php
 
