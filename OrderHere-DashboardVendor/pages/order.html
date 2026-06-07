@@ -1,247 +1,634 @@
-<style>
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pesanan - Chick on Cup</title>
+
+  <!-- FONT AWESOME -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Segoe UI", sans-serif;
+    }
+
     body {
-    background: #cccccc;
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-  }
+      background: #cccccc;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+    }
 
-  .container {
-    width: 100%;
-    max-width: 1000px; 
-    height: 100vh;
-    margin: auto; 
-    background: #fff;
-    overflow: hidden;
-    position: relative; /* WAJIB */
-    display: flex;
-  }
-  
-  .title {
-    background: linear-gradient(90deg, #ffa83f 0%, #ff5e25 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    font-size: 40px;
-    font-weight: 700;
-  }
+    .container {
+      width: 100%;
+      max-width: 1000px;
+      height: 100vh;
+      margin: auto;
+      background: #fff;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
 
-  .subtitle {
-    font-size: 24px;
-    color: #333;
-    margin-bottom: 20px;
-  }
+    /* ✅ HEADER NAVIGASI */
+    .header {
+      background: white;
+      padding: 20px 40px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
 
-  /* FILTER */
-  .filters {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-bottom: 25px;
-  }
+    .header h1 {
+      color: #1a1a1a;
+      font-size: 24px;
+    }
 
-  .filters button {
-    padding: 8px 14px;
-    border: 1.5px solid #ff8a35;
-    background: white;
-    border-radius: 10px;
-    font-size: 14px;
-    cursor: pointer;
-  }
+    .nav-links {
+      display: flex;
+      gap: 20px;
+    }
 
-  .filters button.active {
-    background: linear-gradient(90deg, #ffa83f 0%, #ff5e25 100%);
-    color: white;
-    border: none;
-  }
+    .nav-links a {
+      color: #666;
+      text-decoration: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      transition: all 0.3s;
+    }
 
-  /* ORDER WRAPPER */
-  .order-container {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    max-width: 900px;
-  }
+    .nav-links a:hover {
+      background: #f97316;
+      color: white;
+    }
 
-  /* CARD */
-  .card {
-    background: white;
-    border-radius: 18px;
-    padding: 18px;
-    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
-    border: 1px solid #eee;
-    width: 100%;
-    transition: 0.2s;
-  }
+    .nav-links a.active {
+      background: #f97316;
+      color: white;
+    }
 
-  .card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-  }
+    /* CONTENT */
+    .content {
+      flex: 1;
+      padding: 30px 40px;
+      overflow-y: auto;
+    }
 
-  /* HEADER */
-  .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-  }
+    .title {
+      background: linear-gradient(90deg, #ffa83f 0%, #ff5e25 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-size: 40px;
+      font-weight: 700;
+    }
 
-  .badge {
-    background: #3396ff;
-    color: white;
-    padding: 5px 12px;
-    border-radius: 8px;
-    font-size: 13px;
-  }
+    .subtitle {
+      font-size: 24px;
+      color: #333;
+      margin-bottom: 20px;
+    }
 
-  .order-info {
-    text-align: right;
-  }
+    /* FILTER */
+    .filters {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 25px;
+    }
 
-  .order-number {
-    font-size: 20px;
-    font-weight: bold;
-    display: block;
-  }
+    .filters button {
+      padding: 8px 14px;
+      border: 1.5px solid #ff8a35;
+      background: white;
+      border-radius: 10px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
 
-  .order-time {
-    font-size: 13px;
-    color: #888;
-  }
+    .filters button:hover {
+      background: #fff5f0;
+    }
 
-  /* BODY */
-  .location {
-    font-size: 18px;
-    font-weight: 700;
-    margin: 10px 0;
-  }
+    .filters button.active {
+      background: linear-gradient(90deg, #ffa83f 0%, #ff5e25 100%);
+      color: white;
+      border: none;
+    }
 
-  .item-list {
-    color: #666;
-    font-size: 15px;
-  }
+    /* ORDER WRAPPER */
+    .order-container {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      max-width: 900px;
+    }
 
-  .item {
-    display: flex;
-    justify-content: space-between;
-    margin: 3px 0;
-  }
+    /* CARD */
+    .card {
+      background: white;
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+      border: 1px solid #eee;
+      width: 100%;
+      transition: 0.2s;
+    }
 
-  /* DIVIDER */
-  .divider {
-    border-bottom: 2px dotted #ddd;
-    margin: 15px 0;
-  }
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    }
 
-  /* TOTAL */
-  .total-price {
-    text-align: right;
-    font-size: 18px;
-    font-weight: bold;
-  }
+    /* HEADER */
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
 
-  /* BUTTON */
-  .action-btn {
-    margin-top: 10px;
-    margin-left: auto;
-    display: block;
-    padding: 8px 18px;
-    border: 1.5px solid #ffcc00;
-    background: white;
-    color: #ffb300;
-    border-radius: 10px;
-    cursor: pointer;
-  }
-</style>
-<div class="title">Chick on Cup</div>
-<div class="subtitle"><strong>Hey,</strong><br />what’s up?</div>
+    .badge {
+      color: white;
+      padding: 5px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+    }
 
-<div class="filters">
-  <button class="active">Semua</button>
-  <button>Pesanan Baru</button>
-  <button>Sedang Dipersiapkan</button>
-  <button>Diantar</button>
-  <button>Selesai</button>
-  <button>Dibatalkan</button>
-</div>
+    .badge-PENDING { background: #3396ff; }
+    .badge-ONPROGRESS { background: #ffcc00; color: #333; }
+    .badge-DIANTAR { background: #ff8a35; }
+    .badge-DONE { background: #28a745; }
+    .badge-CANCELLED { background: #dc3545; }
 
-<div class="order-container">
-  <div class="card">
-    <div class="card-header">
-      <div class="badge">Pesanan Baru</div>
-      <div class="order-info">
-        <span class="order-number">#20</span>
-        <span class="order-time">08.30</span>
+    .order-info {
+      text-align: right;
+    }
+
+    .order-number {
+      font-size: 20px;
+      font-weight: bold;
+      display: block;
+    }
+
+    .order-time {
+      font-size: 13px;
+      color: #888;
+    }
+
+    /* BODY */
+    .location {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 10px 0;
+    }
+
+    .dining-type {
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 10px;
+    }
+
+    .item-list {
+      color: #666;
+      font-size: 15px;
+    }
+
+    .item {
+      display: flex;
+      justify-content: space-between;
+      margin: 3px 0;
+    }
+
+    .item-notes {
+      font-size: 12px;
+      color: #999;
+      font-style: italic;
+      margin-left: 20px;
+    }
+
+    /* DIVIDER */
+    .divider {
+      border-bottom: 2px dotted #ddd;
+      margin: 15px 0;
+    }
+
+    /* TOTAL */
+    .total-price {
+      text-align: right;
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    /* BUTTONS */
+    .card-footer {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 10px;
+    }
+
+    .action-btn {
+      padding: 8px 18px;
+      border: 1.5px solid #ffcc00;
+      background: white;
+      color: #ffb300;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .action-btn:hover {
+      background: #fff5f0;
+    }
+
+    .action-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .cancel-btn {
+      padding: 8px 18px;
+      border: 1.5px solid #dc3545;
+      background: white;
+      color: #dc3545;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .cancel-btn:hover {
+      background: #fff5f5;
+    }
+
+    .cancel-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* LOADING & EMPTY STATE */
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+
+    .loading i {
+      font-size: 32px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 10px;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #999;
+    }
+
+    .empty-state i {
+      font-size: 64px;
+      margin-bottom: 20px;
+      opacity: 0.3;
+    }
+
+    .empty-state h3 {
+      font-size: 20px;
+      margin-bottom: 10px;
+      color: #666;
+    }
+
+    /* TOAST NOTIFICATION */
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 16px 24px;
+      border-radius: 8px;
+      color: white;
+      font-weight: 600;
+      z-index: 9999;
+      opacity: 0;
+      transform: translateX(400px);
+      transition: all 0.3s ease;
+      max-width: 400px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .toast.success { background: #10b981; }
+    .toast.error { background: #ef4444; }
+    .toast.info { background: #3b82f6; }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <!-- ✅ HEADER NAVIGASI -->
+    <div class="header">
+      <h1>🏪 Chick on Cup</h1>
+      <div class="nav-links">
+        <a href="../index.html">📄 Pesanan</a>
+        <a href="menu.html">📖 Menu</a>
+        <a href="#" onclick="handleLogout()">🚪 Logout</a>
       </div>
     </div>
 
-    <div class="card-body">
-      <h3 class="location">Lantai 5 Ruang 505 a/n Jonathan</h3>
+    <!-- CONTENT -->
+    <div class="content">
+      <div class="title">Pesanan</div>
+      <div class="subtitle"><strong>Kelola</strong> pesanan masuk</div>
 
-      <div class="item-list">
-        <div class="item">
-          <span>Nasi Goreng</span>
-          <span>x1</span>
-        </div>
-        <div class="item">
-          <span>Mie Goreng</span>
-          <span>x1</span>
-        </div>
+      <!-- FILTER -->
+      <div class="filters">
+        <button class="active" data-status="all">Semua</button>
+        <button data-status="PENDING">Pesanan Baru</button>
+        <button data-status="ONPROGRESS">Sedang Dipersiapkan</button>
+        <button data-status="DIANTAR">Diantar</button>
+        <button data-status="DONE">Selesai</button>
+        <button data-status="CANCELLED">Dibatalkan</button>
       </div>
 
-      <div class="divider"></div>
-      <div class="total-price">Rp 24.000</div>
-    </div>
-
-    <div class="card-footer">
-      <button class="action-btn">Siapkan Pesanan</button>
+      <!-- ORDER LIST -->
+      <div class="order-container" id="orderContainer">
+        <div class="loading">
+          <i class="fas fa-spinner"></i>
+          <p>Memuat pesanan...</p>
+        </div>
+      </div>
     </div>
   </div>
-</div>
 
-<script data-init>
-  function initOrderPage() {
-    const filterButtons = document.querySelectorAll(".filters button");
-    const cards = document.querySelectorAll(".card");
+  <!-- TOAST NOTIFICATION -->
+  <div class="toast" id="toast"></div>
 
-    filterButtons.forEach((button) => {
-      button.onclick = function () {
-        filterButtons.forEach((btn) => btn.classList.remove("active"));
-        this.classList.add("active");
+  <!-- Load config.js -->
+  <script src="../js/config.js"></script>
 
-        const selected = this.innerText.toLowerCase();
+  <script>
+    // Check auth
+    if (!requireAuth()) {
+      window.location.href = 'login.html';
+    }
 
-        cards.forEach((card) => {
-          const status = card.querySelector(".badge").innerText.toLowerCase();
+    // Global state
+    let allOrders = [];
+    let currentFilter = 'all';
+    let refreshInterval = null;
 
-          card.style.display =
-            selected === "semua" || status === selected ? "block" : "none";
-        });
-      };
+    // Status mapping
+    const STATUS_MAP = {
+      'PENDING': 'Pesanan Baru',
+      'ONPROGRESS': 'Sedang Dipersiapkan',
+      'DIANTAR': 'Diantar',
+      'DONE': 'Selesai',
+      'CANCELLED': 'Dibatalkan'
+    };
+
+    // Button text mapping
+    const BUTTON_MAP = {
+      'PENDING': { text: 'Siapkan Pesanan', next: 'ONPROGRESS' },
+      'ONPROGRESS': { text: 'Antar Pesanan', next: 'DIANTAR' },
+      'DIANTAR': { text: 'Selesaikan Pesanan', next: 'DONE' },
+      'DONE': null,
+      'CANCELLED': null
+    };
+
+    // Load orders on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      loadOrders();
+      setupFilters();
+      
+      // Auto-refresh setiap 30 detik
+      refreshInterval = setInterval(loadOrders, 30000);
     });
 
-    document.querySelectorAll(".action-btn").forEach((btn) => {
-      btn.onclick = function () {
-        const card = this.closest(".card");
-        const badge = card.querySelector(".badge");
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', function() {
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+      }
+    });
 
-        const state = badge.innerText;
+    // Load orders from API
+    async function loadOrders() {
+      try {
+        const { response, data } = await fetchWithAuth(
+          `${API_CONFIG.ENDPOINTS.ORDERS}?per_page=100`
+        );
 
-        if (state === "Pesanan Baru") {
-          badge.innerText = "Sedang Dipersiapkan";
-          badge.style.background = "#ffcc00";
-          this.innerText = "Antar Pesanan";
-        } else if (state === "Sedang Dipersiapkan") {
-          badge.innerText = "Diantar";
-          badge.style.background = "#ff8a35";
-          this.innerText = "Selesaikan Pesanan";
-        } else if (state === "Diantar") {
-          badge.innerText = "Selesai";
-          badge.style.background = "#28a745";
-          this.style.display = "none";
+        if (data.success) {
+          allOrders = data.data;
+          renderOrders();
+        } else {
+          showError('Gagal memuat pesanan');
         }
-      };
-    });
-  }
+      } catch (error) {
+        console.error('Error loading orders:', error);
+        showError('Gagal terhubung ke server');
+      }
+    }
 
-  initOrderPage();
-</script>
+    // Setup filter buttons
+    function setupFilters() {
+      const filterButtons = document.querySelectorAll('.filters button');
+      
+      filterButtons.forEach(button => {
+        button.addEventListener('click', function() {
+          filterButtons.forEach(btn => btn.classList.remove('active'));
+          this.classList.add('active');
+          
+          currentFilter = this.dataset.status;
+          renderOrders();
+        });
+      });
+    }
+
+    // Render orders based on current filter
+    function renderOrders() {
+      const container = document.getElementById('orderContainer');
+      
+      // Filter orders
+      let filteredOrders = allOrders;
+      if (currentFilter !== 'all') {
+        filteredOrders = allOrders.filter(order => order.status === currentFilter);
+      }
+
+      // Empty state
+      if (filteredOrders.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <i class="fas fa-inbox"></i>
+            <h3>Tidak ada pesanan</h3>
+            <p>${currentFilter === 'all' ? 'Belum ada pesanan masuk' : 'Tidak ada pesanan dengan status ini'}</p>
+          </div>
+        `;
+        return;
+      }
+
+      // Render cards
+      container.innerHTML = filteredOrders.map(order => renderOrderCard(order)).join('');
+    }
+
+    // Render single order card
+    function renderOrderCard(order) {
+      const statusLabel = STATUS_MAP[order.status] || order.status;
+      const buttonConfig = BUTTON_MAP[order.status];
+      const canCancel = ['PENDING', 'ONPROGRESS', 'DIANTAR'].includes(order.status);
+      
+      // Format time
+      const orderTime = new Date(order.created_at).toLocaleTimeString('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+      // Render food items
+      const foodItems = order.foods.map(food => {
+        const qty = food.pivot ? food.pivot.quantity : 1;
+        const notes = food.pivot && food.pivot.notes ? food.pivot.notes : '';
+        return `
+          <div class="item">
+            <span>${food.name}</span>
+            <span>x${qty}</span>
+          </div>
+          ${notes ? `<div class="item-notes">📝 ${notes}</div>` : ''}
+        `;
+      }).join('');
+
+      // Render buttons
+      let buttons = '';
+      if (buttonConfig) {
+        buttons += `<button class="action-btn" onclick="updateOrderStatus(${order.id}, '${buttonConfig.next}')">${buttonConfig.text}</button>`;
+      }
+      if (canCancel) {
+        buttons += `<button class="cancel-btn" onclick="cancelOrder(${order.id})">Batalkan</button>`;
+      }
+
+      return `
+        <div class="card" data-order-id="${order.id}">
+          <div class="card-header">
+            <div class="badge badge-${order.status}">${statusLabel}</div>
+            <div class="order-info">
+              <span class="order-number">#${order.queue_number}</span>
+              <span class="order-time">${orderTime}</span>
+            </div>
+          </div>
+
+          <div class="card-body">
+            <h3 class="location">${order.notes_order || 'Tidak ada catatan'}</h3>
+            <div class="dining-type">📍 ${order.dining_type}</div>
+
+            <div class="item-list">
+              ${foodItems}
+            </div>
+
+            <div class="divider"></div>
+            <div class="total-price">${formatRp(order.total_price)}</div>
+          </div>
+
+          <div class="card-footer">
+            ${buttons}
+          </div>
+        </div>
+      `;
+    }
+
+    // Update order status
+    async function updateOrderStatus(orderId, newStatus) {
+      if (!confirm(`Ubah status pesanan menjadi ${STATUS_MAP[newStatus]}?`)) {
+        return;
+      }
+
+      try {
+        const { response, data } = await fetchWithAuth(
+          `${API_CONFIG.ENDPOINTS.ORDER_UPDATE_STATUS}/${orderId}/status`,
+          {
+            method: 'PATCH',
+            body: JSON.stringify({ status: newStatus })
+          }
+        );
+
+        if (data.success) {
+          showSuccess(`Status pesanan berhasil diubah ke ${STATUS_MAP[newStatus]}`);
+          await loadOrders(); // Reload orders
+        } else {
+          showError(data.message || 'Gagal mengubah status');
+        }
+      } catch (error) {
+        console.error('Error updating status:', error);
+        showError('Gagal terhubung ke server');
+      }
+    }
+
+    // Cancel order
+    async function cancelOrder(orderId) {
+      if (!confirm('Yakin ingin membatalkan pesanan ini?')) {
+        return;
+      }
+
+      try {
+        const { response, data } = await fetchWithAuth(
+          `${API_CONFIG.ENDPOINTS.ORDER_UPDATE_STATUS}/${orderId}/status`,
+          {
+            method: 'PATCH',
+            body: JSON.stringify({ status: 'CANCELLED' })
+          }
+        );
+
+        if (data.success) {
+          showSuccess('Pesanan berhasil dibatalkan');
+          await loadOrders(); // Reload orders
+        } else {
+          showError(data.message || 'Gagal membatalkan pesanan');
+        }
+      } catch (error) {
+        console.error('Error cancelling order:', error);
+        showError('Gagal terhubung ke server');
+      }
+    }
+
+    // Toast notifications
+    function showSuccess(message) {
+      showToast(message, 'success');
+    }
+
+    function showError(message) {
+      showToast(message, 'error');
+    }
+
+    function showToast(message, type = 'info') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `toast ${type} show`;
+      
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
+    }
+
+    // Logout function
+    function handleLogout() {
+      if (confirm('Yakin ingin logout?')) {
+        removeToken();
+        window.location.href = 'login.html';
+      }
+    }
+  </script>
+</body>
+</html>

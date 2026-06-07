@@ -1,837 +1,914 @@
-<style>
-  /* =========================
-   GLOBAL RESET
-========================= */
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: "Montserrat", sans-serif;
-  }
-
-  body {
-    background: #cccccc;
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-  }
-
-  .container {
-    width: 100%;
-    max-width: 1000px;
-    height: 100vh;
-    margin: auto;
-    background: #fff;
-    overflow: hidden;
-    position: relative;
-    display: flex;
-  }
-
-  .header-section {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 25px;
-  }
-
-  .title {
-    font-size: 40px;
-    font-weight: 800;
-    background: linear-gradient(90deg, #ffa83f, #ff5e25);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-
-  .subtitle {
-    font-size: 22px;
-    color: #333;
-  }
-
-  .subtitle strong {
-    font-weight: 800;
-    color: #000;
-  }
-
-  .add-btn {
-    background: linear-gradient(90deg, #ffa83f, #ff5e25);
-    color: white;
-    border: none;
-    padding: 10px 22px;
-    border-radius: 10px;
-    font-weight: 700;
-    cursor: pointer;
-    box-shadow: 0 6px 15px rgba(255, 94, 37, 0.25);
-    transition: 0.2s;
-  }
-
-  .add-btn:active {
-    transform: scale(0.97);
-  }
-
-  /* ROW */
-  .sheet-img-row {
-    display: flex;
-    gap: 16px;
-    margin-bottom: 20px;
-  }
-
-  /* PREVIEW */
-  .sheet-img img {
-    width: 160px;
-    height: 110px;
-    object-fit: cover;
-    border-radius: 14px;
-    border: 1px solid #eee;
-  }
-
-  /* UPLOAD BOX */
-  .upload-box {
-    flex: 1;
-    border: 2px dashed #d1d5db;
-    border-radius: 14px;
-    background: #fafafa;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: 0.2s;
-    padding: 10px;
-  }
-
-  .upload-box:hover {
-    border-color: #ff5e25;
-    background: #fff7f3;
-  }
-
-  /* CONTENT */
-  .upload-content {
-    text-align: center;
-  }
-
-  .upload-icon {
-    font-size: 22px;
-    margin-bottom: 6px;
-  }
-
-  .upload-text {
-    font-size: 13px;
-    font-weight: 600;
-    color: #333;
-  }
-
-  .upload-sub {
-    font-size: 11px;
-    color: #888;
-    margin-top: 4px;
-  }
-
-  /* =========================
-   MENU CARD
-========================= */
-  .menu-container {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .menu-card {
-    background: white;
-    border-radius: 18px;
-    padding: 15px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
-    border: 1px solid #eee;
-    height: 140px;
-    transition: 0.2s;
-  }
-
-  .menu-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-  }
-
-  /* LEFT */
-  .menu-left {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-  }
-
-  .menu-left img {
-    width: 110px;
-    height: 90px;
-    object-fit: cover;
-    border-radius: 12px;
-  }
-
-  .menu-name {
-    font-size: 18px;
-    font-weight: 700;
-    color: #000;
-  }
-
-  .price {
-    font-size: 15px;
-    color: #666;
-    margin-top: 4px;
-  }
-
-  /* RIGHT */
-  .menu-right {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 10px;
-  }
-
-  .action-icons {
-    display: flex;
-    gap: 10px;
-  }
-
-  .icon-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    border: 1.5px solid #ff5e25;
-    background: white;
-    cursor: pointer;
-    font-size: 14px;
-    transition: 0.2s;
-  }
-
-  .icon-btn:hover {
-    background: #fff3ed;
-  }
-
-  .icon-btn.delete {
-    border-color: #ff5e25;
-  }
-
-  /* =========================
-   TOGGLE SWITCH
-========================= */
-  .switch {
-    position: relative;
-    display: inline-block;
-    width: 40px;
-    height: 22px;
-  }
-
-  .switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-  }
-
-  .slider {
-    position: absolute;
-    cursor: pointer;
-    inset: 0;
-    background: #ccc;
-    transition: 0.3s;
-    border-radius: 20px;
-  }
-
-  .slider:before {
-    content: "";
-    position: absolute;
-    height: 16px;
-    width: 16px;
-    left: 3px;
-    bottom: 3px;
-    background: white;
-    border-radius: 50%;
-    transition: 0.3s;
-  }
-
-  input:checked + .slider {
-    background: linear-gradient(90deg, #ffa83f, #ff5e25);
-  }
-
-  input:checked + .slider:before {
-    transform: translateX(18px);
-  }
-
-  .btn-tambah:active {
-    transform: scale(0.98);
-  }
-
-  /* =========================
-   BOTTOM SHEET MODERN
-========================= */
-  .bottom-sheet {
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%) translateY(100%);
-    width: 100%;
-    max-width: 1000px;
-    height: 95%;
-    background: #f9fafb;
-    border-radius: 26px 26px 0 0;
-    box-shadow: 0 -15px 50px rgba(0, 0, 0, 0.2);
-    transition: 0.35s cubic-bezier(0.32, 0.72, 0, 1);
-    display: flex;
-    flex-direction: column;
-    z-index: 200;
-  }
-
-  .bottom-sheet.open {
-    transform: translateX(-50%) translateY(0);
-  }
-
-  /* HANDLE */
-  .sheet-handle {
-    width: 60px;
-    height: 6px;
-    background: #d1d5db;
-    border-radius: 20px;
-    margin: 12px auto;
-  }
-
-  /* BODY */
-
-  .sheet-body {
-    padding: 24px;
-    overflow-y: auto;
-    flex: 1;
-  }
-
-  .sheet-body h3 {
-    font-size: 24px;
-    font-weight: 800;
-    margin-bottom: 20px;
-  }
-
-  /* IMAGE */
-  .sheet-img img {
-    width: 160px;
-    height: 110px;
-    object-fit: cover;
-    border-radius: 14px;
-  }
-
-  /* INPUT */
-  .sheet-section {
-    margin-bottom: 16px;
-  }
-
-  .sheet-section label {
-    font-size: 14px;
-    font-weight: 600;
-    color: #6b7280;
-    margin-bottom: 6px;
-    display: block;
-  }
-
-  .input-modern {
-    width: 100%;
-    padding: 14px 16px;
-    border-radius: 14px;
-    border: 1px solid #e5e7eb;
-    background: #fff;
-    font-size: 15px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-  }
-
-  .input-modern:focus {
-    outline: none;
-    border-color: #ff5e25;
-    box-shadow: 0 0 0 3px rgba(255, 94, 37, 0.15);
-  }
-
-  /* ROW */
-  .row {
-    display: flex;
-    gap: 12px;
-  }
-
-  /* PRICE GROUP */
-  .price-group {
-    display: flex;
-    align-items: center;
-    border-radius: 14px;
-    overflow: hidden;
-    border: 1px solid #e5e7eb;
-    background: #fff;
-  }
-
-  .price-prefix {
-    padding: 14px;
-    background: #f3f4f6;
-    font-weight: 600;
-  }
-
-  .price-group input {
-    border: none;
-    padding: 14px;
-    flex: 1;
-    font-size: 15px;
-  }
-
-  /* SELECT */
-  select.input-modern {
-    appearance: none;
-  }
-
-  /* TASTE BUTTONS */
-  .taste-row {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 10px;
-  }
-
-  .taste-box {
-    background: #fff;
-    border-radius: 14px;
-    padding: 10px;
-    width: 80px;
-    text-align: center;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
-    border: 1px solid #eee;
-  }
-
-  .taste-box span {
-    font-size: 12px;
-    color: #777;
-    display: block;
-    margin-bottom: 4px;
-  }
-
-  .taste-box strong {
-    font-size: 16px;
-  }
-
-  /* =========================
-   MENU TAMBAHAN
-========================= */
-  .extra-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 20px;
-  }
-
-  .extra-header h4 {
-    font-size: 16px;
-    font-weight: 700;
-  }
-
-  .extra-actions {
-    display: flex;
-    gap: 8px;
-  }
-
-  .icon-orange {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    border: 2px solid #ff5e25;
-    background: white;
-    color: #ff5e25;
-    font-size: 18px;
-    cursor: pointer;
-    transition: 0.2s;
-  }
-
-  .icon-orange:hover {
-    background: #fff3ed;
-  }
-
-  /* FORM EXTRA */
-  .extra-form {
-    display: flex;
-    gap: 12px;
-    margin-top: 12px;
-  }
-
-  .extra-form .sheet-section {
-    flex: 1;
-  }
-
-  /* NOTE */
-  .extra-note {
-    font-size: 13px;
-    color: #777;
-    margin-top: 6px;
-  }
-
-  /* BUTTON */
-  .btn-save {
-    width: 100%;
-    padding: 16px;
-    border-radius: 16px;
-    border: none;
-    font-size: 16px;
-    font-weight: 800;
-    color: white;
-    background: linear-gradient(90deg, #ffa83f, #ff5e25);
-    box-shadow: 0 10px 25px rgba(255, 94, 37, 0.3);
-    cursor: pointer;
-  }
-
-  .btn-save:active {
-    transform: scale(0.97);
-  }
-
-  .btn-tambah:hover {
-    opacity: 0.95;
-  }
-
-  /* =========================
-   OVERLAY
-========================= */
-  .sheet-overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.45);
-    opacity: 0;
-    pointer-events: none;
-    transition: 0.25s;
-    z-index: 100;
-  }
-
-  .sheet-overlay.open {
-    opacity: 1;
-    pointer-events: all;
-  }
-</style>
-
-<div class="header-section">
-  <div>
-    <div class="title">Chick on Cup</div>
-    <div class="subtitle"><strong>Menu</strong> Kamu</div>
-  </div>
-  <button class="add-btn">Tambah</button>
-</div>
-
-<div class="menu-container">
-  <div class="card menu-card">
-    <div class="menu-left">
-      <img src="images/assets/menu.png" class="preview-img" id="previewImg" />
-      <div class="menu-info">
-        <div class="menu-name">Nasi Goreng</div>
-        <div class="price">Rp 20.000</div>
-      </div>
-    </div>
-
-    <div class="menu-right">
-      <div class="action-icons">
-        <button class="icon-btn edit">✏️</button>
-        <button class="icon-btn delete">🗑️</button>
-      </div>
-      <label class="switch">
-        <input type="checkbox" checked />
-        <span class="slider round"></span>
-      </label>
-    </div>
-  </div>
-</div>
-
-<!-- OVERLAY -->
-<div class="sheet-overlay" id="sheet-overlay" onclick="closeSheet()"></div>
-
-<!-- BOTTOM SHEET (UNIVERSAL) -->
-<div class="bottom-sheet" id="bottom-sheet">
-  <div class="sheet-handle"></div>
-
-  <div class="sheet-body">
-    <h3 id="sheet-title">Edit Menu</h3>
-
-    <!-- IMAGE -->
-    <div class="sheet-img-row">
-      <!-- PREVIEW -->
-      <div class="sheet-img">
-        <img id="preview-image" src="images\assets\menu.png" />
-      </div>
-
-      <!-- UPLOAD BOX -->
-      <label class="upload-box">
-        <input type="file" id="image-input" accept="image/*" hidden />
-
-        <div class="upload-content">
-          <div class="upload-icon">⬆</div>
-          <div class="upload-text">Choose a file or drag & drop it here</div>
-          <div class="upload-sub">JPEG, PNG, PDF, up to 50 MB</div>
-        </div>
-      </label>
-    </div>
-
-    <!-- NAMA -->
-    <div class="sheet-section">
-      <label>Nama</label>
-      <input type="text" id="sheet-name" class="input-modern" />
-    </div>
-
-    <!-- HARGA + KATEGORI -->
-    <div class="row">
-      <div class="sheet-section" style="flex: 1">
-        <label>Harga</label>
-        <div class="price-group">
-          <div class="price-prefix">Rp</div>
-          <input type="text" id="sheet-price-input" />
-        </div>
-      </div>
-
-      <div class="sheet-section" style="flex: 1">
-        <label>Kategori</label>
-        <select class="input-modern">
-          <option>Makanan</option>
-          <option>Minuman</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- TASTE -->
-    <div class="taste-row">
-      <div class="taste-box"><span>Manis</span><strong>1</strong></div>
-      <div class="taste-box"><span>Pahit</span><strong>5</strong></div>
-      <div class="taste-box"><span>Asin</span><strong>5</strong></div>
-      <div class="taste-box"><span>Asam</span><strong>5</strong></div>
-      <div class="taste-box"><span>Pedas</span><strong>5</strong></div>
-    </div>
-
-    <!-- MENU TAMBAHAN -->
-    <div class="extra-header">
-      <h4>Menu Tambahan</h4>
-      <div class="extra-actions">
-        <button class="icon-orange">🗑️</button>
-        <button class="icon-orange">＋</button>
-      </div>
-    </div>
-
-    <div class="extra-form">
-      <!-- NAMA -->
-      <div class="sheet-section">
-        <label>Nama</label>
-        <select class="input-modern">
-          <option>Telur</option>
-          <option>Keju</option>
-          <option>Ayam</option>
-        </select>
-      </div>
-
-      <!-- HARGA -->
-      <div class="sheet-section">
-        <label>Harga</label>
-        <div class="price-group">
-          <div class="price-prefix">Rp</div>
-          <input type="text" value="75.000" />
-        </div>
-      </div>
-    </div>
-
-    <div class="extra-note">Telur (Rp3.000)</div>
-  </div>
-
-  <div style="padding: 20px">
-    <button class="btn-save" onclick="saveMenu()">Simpan</button>
-  </div>
-</div>
-
-<script>
-const extraPrices = {
-  Telur: 3000,
-  Keju: 5000,
-  Ayam: 8000,
-};
-
-  window.initMenuPage = function () {
-    overlay = document.getElementById("sheet-overlay");
-
-    const addBtn = document.querySelector(".add-btn");
-    if (addBtn) addBtn.onclick = openTambah;
-
-    document.querySelectorAll(".icon-btn.edit").forEach((btn) => {
-      btn.onclick = () => openEdit(btn.closest(".menu-card"));
-    });
-
-    document.querySelectorAll(".icon-btn.delete").forEach((btn) => {
-      btn.onclick = () => btn.closest(".menu-card")?.remove();
-    });
-
-    const el = document.getElementById("sheet-overlay");
-    if (el) el.onclick = closeSheet;
-  };
-
-  bindExtraListener();
-
-  function bindExtraListener() {
-  const select = document.querySelector(".extra-form select");
-  if (!select) return;
-
-  select.onchange = function () {
-    updateExtraNote(this.value);
-  };
-}
-
-function updateExtraNote(value) {
-  const note = document.querySelector(".extra-note");
-
-  if (!value || !extraPrices[value]) {
-    note.innerText = "";
-    return;
-  }
-
-  const harga = extraPrices[value].toLocaleString("id-ID");
-
-  note.innerText = `${value} (Rp${harga})`;
-}
-  
-  function openTambah() {
-    mode = "add";
-    currentCard = null;
-
-    document.getElementById("sheet-title").innerText = "Tambah Menu";
-
-    // RESET INPUT
-    document.getElementById("sheet-name").value = "";
-    document.getElementById("sheet-price-input").value = "";
-
-    // RESET SELECT (kategori)
-    document.querySelector("select.input-modern").selectedIndex = 0;
-
-    // RESET IMAGE
-    document.getElementById("preview-image").src = "";
-    document.getElementById("image-input").value = "";
-
-    // RESET TASTE
-    document.querySelectorAll(".taste-box strong").forEach((el) => {
-      el.innerText = "0";
-    });
-
-    // RESET EXTRA
-    document.querySelector(".extra-form").innerHTML = `
-    <div class="sheet-section">
-      <label>Nama</label>
-      <select class="input-modern">
-        <option value="">Pilih tambahan</option>
-        <option>Telur</option>
-        <option>Keju</option>
-        <option>Ayam</option>
-      </select>
-    </div>
-
-    <div class="sheet-section">
-      <label>Harga</label>
-      <div class="price-group">
-        <div class="price-prefix">Rp</div>
-        <input type="text" placeholder="0" />
-      </div>
-    </div>
-  `;
-
-    document.querySelector(".extra-note").innerText = "";
-
-    openSheet();
-  }
-
-  bindExtraListener();
-  
-  /* =========================
-   OPEN EDIT
-========================= */
-  function openEdit(card) {
-    mode = "edit";
-    currentCard = card;
-
-    const nama = card.querySelector(".menu-name").innerText;
-    const harga = card.querySelector(".price").innerText.replace("Rp ", "");
-    const img = card.querySelector("img").src;
-
-    document.getElementById("sheet-title").innerText = "Edit Menu";
-    document.getElementById("sheet-name").value = nama;
-    document.getElementById("sheet-price-input").value = harga;
-    document.getElementById("preview-image").src = img;
-
-    openSheet();
-  }
-
-  function openSheet() {
-    document.getElementById("bottom-sheet").classList.add("open");
-    document.getElementById("sheet-overlay").classList.add("open");
-  }
-
-  /* =========================
-   CLOSE SHEET
-========================= */
-  function closeSheet() {
-    document.getElementById("bottom-sheet").classList.remove("open");
-    document.getElementById("sheet-overlay").classList.remove("open");
-  }
-
-  const input = document.getElementById("image-input");
-  const preview = document.getElementById("preview-image");
-
-  if (input) {
-    input.addEventListener("change", function () {
-      const file = this.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        preview.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
-    });
-  }
-
-  /* =========================
-   SAVE MENU
-========================= */
-  function saveMenu() {
-    const nama = document.getElementById("sheet-name").value;
-    const harga = document.getElementById("sheet-price-input").value;
-    const img = document.getElementById("preview-image").src;
-
-    if (!nama || !harga) {
-      alert("Nama & harga wajib diisi!");
-      return;
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Menu - Chick on Cup</title>
+
+  <!-- FONT AWESOME -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Montserrat", sans-serif; }
+    body { background: #cccccc; min-height: 100vh; display: flex; justify-content: center; }
+    .container { width: 100%; max-width: 1000px; min-height: 100vh; margin: auto; background: #fff; overflow: hidden; position: relative; display: flex; flex-direction: column; }
+
+    /* ✅ HEADER NAVIGASI */
+    .header {
+      background: white;
+      padding: 20px 40px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header h1 { color: #1a1a1a; font-size: 24px; }
+    .nav-links { display: flex; gap: 20px; }
+    .nav-links a {
+      color: #666;
+      text-decoration: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      transition: all 0.3s;
+    }
+    .nav-links a:hover { background: #f97316; color: white; }
+    .nav-links a.active { background: #f97316; color: white; }
+
+    /* CONTENT */
+    .content { flex: 1; padding: 30px 40px; overflow-y: auto; }
+
+    .header-section { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+    .title { font-size: 40px; font-weight: 800; background: linear-gradient(90deg, #ffa83f, #ff5e25); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .subtitle { font-size: 22px; color: #333; }
+    .subtitle strong { font-weight: 800; color: #000; }
+
+    .add-btn {
+      background: linear-gradient(90deg, #ffa83f, #ff5e25);
+      color: white;
+      border: none;
+      padding: 10px 22px;
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 6px 15px rgba(255, 94, 37, 0.25);
+      transition: 0.2s;
+    }
+    .add-btn:active { transform: scale(0.97); }
+    .add-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* ROW */
+    .sheet-img-row { display: flex; gap: 16px; margin-bottom: 20px; }
+    .sheet-img img { width: 160px; height: 110px; object-fit: cover; border-radius: 14px; border: 1px solid #eee; }
+
+    .upload-box {
+      flex: 1;
+      border: 2px dashed #d1d5db;
+      border-radius: 14px;
+      background: #fafafa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: 0.2s;
+      padding: 10px;
+    }
+    .upload-box:hover { border-color: #ff5e25; background: #fff7f3; }
+    .upload-content { text-align: center; }
+    .upload-icon { font-size: 22px; margin-bottom: 6px; }
+    .upload-text { font-size: 13px; font-weight: 600; color: #333; }
+    .upload-sub { font-size: 11px; color: #888; margin-top: 4px; }
+
+    /* MENU CARD */
+    .menu-container { display: flex; flex-direction: column; gap: 16px; }
+    .menu-card {
+      background: white;
+      border-radius: 18px;
+      padding: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+      border: 1px solid #eee;
+      min-height: 140px;
+      transition: 0.2s;
+    }
+    .menu-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08); }
+
+    .menu-left { display: flex; align-items: center; gap: 15px; flex: 1; }
+    .menu-left img { width: 110px; height: 90px; object-fit: cover; border-radius: 12px; }
+    .menu-name { font-size: 18px; font-weight: 700; color: #000; }
+    .price { font-size: 15px; color: #666; margin-top: 4px; }
+    .menu-type-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      background: #fff3ed;
+      color: #ff5e25;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      margin-top: 6px;
     }
 
-    if (mode === "add") {
-      // BUAT CARD BARU
-      const container = document.querySelector(".menu-container");
+    .menu-right { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+    .action-icons { display: flex; gap: 10px; }
+    .icon-btn {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      border: 1.5px solid #ff5e25;
+      background: white;
+      cursor: pointer;
+      font-size: 14px;
+      transition: 0.2s;
+    }
+    .icon-btn:hover { background: #fff3ed; }
 
-      const newCard = document.createElement("div");
-      newCard.className = "card menu-card";
+    /* TOGGLE SWITCH */
+    .switch { position: relative; display: inline-block; width: 40px; height: 22px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; cursor: pointer; inset: 0;
+      background: #ccc; transition: 0.3s; border-radius: 20px;
+    }
+    .slider:before {
+      content: ""; position: absolute;
+      height: 16px; width: 16px; left: 3px; bottom: 3px;
+      background: white; border-radius: 50%; transition: 0.3s;
+    }
+    input:checked + .slider { background: linear-gradient(90deg, #ffa83f, #ff5e25); }
+    input:checked + .slider:before { transform: translateX(18px); }
 
-      newCard.innerHTML = `
-      <div class="menu-left">
-        <img src="${img}" />
-        <div class="menu-info">
-          <div class="menu-name">${nama}</div>
-          <div class="price">Rp ${harga}</div>
+    /* BOTTOM SHEET */
+    .bottom-sheet {
+      position: absolute; bottom: 0; left: 50%;
+      transform: translateX(-50%) translateY(100%);
+      width: 100%; max-width: 1000px; height: 95%;
+      background: #f9fafb;
+      border-radius: 26px 26px 0 0;
+      box-shadow: 0 -15px 50px rgba(0, 0, 0, 0.2);
+      transition: 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+      display: flex; flex-direction: column;
+      z-index: 200;
+    }
+    .bottom-sheet.open { transform: translateX(-50%) translateY(0); }
+    .sheet-handle { width: 60px; height: 6px; background: #d1d5db; border-radius: 20px; margin: 12px auto; }
+    .sheet-body { padding: 24px; overflow-y: auto; flex: 1; }
+    .sheet-body h3 { font-size: 24px; font-weight: 800; margin-bottom: 20px; }
+
+    .sheet-section { margin-bottom: 16px; }
+    .sheet-section label { font-size: 14px; font-weight: 600; color: #6b7280; margin-bottom: 6px; display: block; }
+    .input-modern {
+      width: 100%; padding: 14px 16px;
+      border-radius: 14px; border: 1px solid #e5e7eb;
+      background: #fff; font-size: 15px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    }
+    .input-modern:focus { outline: none; border-color: #ff5e25; box-shadow: 0 0 0 3px rgba(255, 94, 37, 0.15); }
+
+    .row { display: flex; gap: 12px; }
+    .price-group {
+      display: flex; align-items: center;
+      border-radius: 14px; overflow: hidden;
+      border: 1px solid #e5e7eb; background: #fff;
+    }
+    .price-prefix { padding: 14px; background: #f3f4f6; font-weight: 600; }
+    .price-group input { border: none; padding: 14px; flex: 1; font-size: 15px; outline: none; }
+
+    select.input-modern { appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right 14px center; background-size: 16px; padding-right: 40px; }
+
+    /* TASTE */
+    .taste-row { display: flex; justify-content: space-between; margin-top: 10px; gap: 8px; }
+    .taste-box {
+      background: #fff; border-radius: 14px; padding: 10px 6px;
+      flex: 1; text-align: center;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+      border: 1px solid #eee;
+    }
+    .taste-box span { font-size: 11px; color: #777; display: block; margin-bottom: 4px; }
+    .taste-box input {
+      width: 100%; border: none; text-align: center;
+      font-size: 16px; font-weight: 700; outline: none;
+      background: transparent;
+    }
+
+    /* EXTRA */
+    .extra-header { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; }
+    .extra-header h4 { font-size: 16px; font-weight: 700; }
+    .extra-actions { display: flex; gap: 8px; }
+    .icon-orange {
+      width: 36px; height: 36px; border-radius: 10px;
+      border: 2px solid #ff5e25; background: white;
+      color: #ff5e25; font-size: 18px; cursor: pointer; transition: 0.2s;
+    }
+    .icon-orange:hover { background: #fff3ed; }
+
+    .extra-list { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+    .extra-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 14px; background: white;
+      border: 1px solid #e5e7eb; border-radius: 10px;
+    }
+    .extra-item-info { flex: 1; }
+    .extra-item-name { font-weight: 600; font-size: 14px; }
+    .extra-item-price { font-size: 12px; color: #666; }
+    .extra-item-remove {
+      background: none; border: none; color: #dc2626;
+      cursor: pointer; font-size: 16px; padding: 4px 8px;
+    }
+
+    .btn-save {
+      width: 100%; padding: 16px;
+      border-radius: 16px; border: none;
+      font-size: 16px; font-weight: 800;
+      color: white;
+      background: linear-gradient(90deg, #ffa83f, #ff5e25);
+      box-shadow: 0 10px 25px rgba(255, 94, 37, 0.3);
+      cursor: pointer; transition: opacity 0.2s;
+    }
+    .btn-save:active { transform: scale(0.97); }
+    .btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* OVERLAY */
+    .sheet-overlay {
+      position: absolute; inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      opacity: 0; pointer-events: none;
+      transition: 0.25s; z-index: 100;
+    }
+    .sheet-overlay.open { opacity: 1; pointer-events: all; }
+
+    /* LOADING & EMPTY */
+    .loading-state, .empty-state { text-align: center; padding: 60px 20px; color: #999; }
+    .loading-state i { font-size: 40px; animation: spin 1s linear infinite; margin-bottom: 15px; display: block; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .empty-state i { font-size: 64px; opacity: 0.3; margin-bottom: 15px; display: block; }
+    .empty-state h3 { margin-bottom: 10px; color: #666; }
+
+    /* TOAST */
+    .toast {
+      position: fixed; top: 20px; right: 20px;
+      padding: 16px 24px; border-radius: 8px;
+      color: white; font-weight: 600; z-index: 9999;
+      opacity: 0; transform: translateX(400px);
+      transition: all 0.3s ease; max-width: 400px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .toast.show { opacity: 1; transform: translateX(0); }
+    .toast.success { background: #10b981; }
+    .toast.error { background: #ef4444; }
+    .toast.info { background: #3b82f6; }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <!-- ✅ HEADER NAVIGASI -->
+    <div class="header">
+      <h1>🏪 Chick on Cup</h1>
+      <div class="nav-links">
+        <a href="../index.html">📄 Pesanan</a>
+        <a href="menu.html" class="active">📖 Menu</a>
+        <a href="#" onclick="handleLogout()">🚪 Logout</a>
+      </div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content">
+      <div class="header-section">
+        <div>
+          <div class="title">Chick on Cup</div>
+          <div class="subtitle"><strong>Menu</strong> Kamu</div>
         </div>
+        <button class="add-btn" id="addMenuBtn">＋ Tambah</button>
       </div>
 
-      <div class="menu-right">
-        <div class="action-icons">
-          <button class="icon-btn edit">✏️</button>
-          <button class="icon-btn delete">🗑️</button>
+      <div class="menu-container" id="menuContainer">
+        <div class="loading-state">
+          <i class="fas fa-spinner"></i>
+          <p>Memuat menu...</p>
         </div>
-        <label class="switch">
-          <input type="checkbox" checked />
-          <span class="slider"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- OVERLAY -->
+  <div class="sheet-overlay" id="sheet-overlay" onclick="closeSheet()"></div>
+
+  <!-- BOTTOM SHEET -->
+  <div class="bottom-sheet" id="bottom-sheet">
+    <div class="sheet-handle"></div>
+
+    <div class="sheet-body">
+      <h3 id="sheet-title">Tambah Menu</h3>
+
+      <!-- IMAGE -->
+      <div class="sheet-img-row">
+        <div class="sheet-img">
+          <img id="preview-image" src="../images/assets/menu.png" />
+        </div>
+        <label class="upload-box">
+          <input type="file" id="image-input" accept="image/*" hidden />
+          <div class="upload-content">
+            <div class="upload-icon">⬆</div>
+            <div class="upload-text">Choose a file or drag & drop</div>
+            <div class="upload-sub">JPEG, PNG, up to 2 MB</div>
+          </div>
         </label>
       </div>
-    `;
 
-      container.appendChild(newCard);
+      <!-- NAMA -->
+      <div class="sheet-section">
+        <label>Nama Menu *</label>
+        <input type="text" id="sheet-name" class="input-modern" maxlength="45" placeholder="Contoh: Nasi Goreng Spesial" />
+      </div>
 
-      // rebind event
-      newCard.querySelector(".edit").onclick = () => openEdit(newCard);
-      newCard.querySelector(".delete").onclick = () => newCard.remove();
-    } else if (mode === "edit" && currentCard) {
-      // UPDATE CARD
-      currentCard.querySelector(".menu-name").innerText = nama;
-      currentCard.querySelector(".price").innerText = `Rp ${harga}`;
-      currentCard.querySelector("img").src = img;
+      <!-- HARGA + KATEGORI -->
+      <div class="row">
+        <div class="sheet-section" style="flex: 1">
+          <label>Harga *</label>
+          <div class="price-group">
+            <div class="price-prefix">Rp</div>
+            <input type="number" id="sheet-price-input" min="0" placeholder="0" />
+          </div>
+        </div>
+        <div class="sheet-section" style="flex: 1">
+          <label>Kategori *</label>
+          <select id="sheet-category" class="input-modern">
+            <option value="FOOD">Makanan</option>
+            <option value="DRINK">Minuman</option>
+            <option value="SNACK">Snack</option>
+            <option value="PRASMANAN">Prasmanan</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- ESTIMATED TIME -->
+      <div class="sheet-section">
+        <label>Estimasi Waktu (menit) *</label>
+        <input type="number" id="sheet-estimated-time" class="input-modern" min="1" value="15" />
+      </div>
+
+      <!-- TASTE (Optional) -->
+      <div class="sheet-section">
+        <label>Level Rasa (opsional, 0-10)</label>
+        <div class="taste-row">
+          <div class="taste-box"><span>Manis</span><input type="number" id="taste-manis" min="0" max="10" value="0" /></div>
+          <div class="taste-box"><span>Pahit</span><input type="number" id="taste-pahit" min="0" max="10" value="0" /></div>
+          <div class="taste-box"><span>Asin</span><input type="number" id="taste-asin" min="0" max="10" value="0" /></div>
+          <div class="taste-box"><span>Asam</span><input type="number" id="taste-asam" min="0" max="10" value="0" /></div>
+          <div class="taste-box"><span>Pedas</span><input type="number" id="taste-pedas" min="0" max="10" value="0" /></div>
+        </div>
+      </div>
+
+      <!-- MENU TAMBAHAN (ADDONS) -->
+      <div class="extra-header">
+        <h4>Menu Tambahan (Addons)</h4>
+        <div class="extra-actions">
+          <button type="button" class="icon-orange" onclick="showAddAddonForm()">＋</button>
+        </div>
+      </div>
+
+      <!-- List addons yang sudah dipilih -->
+      <div class="extra-list" id="addonList"></div>
+
+      <!-- Form tambah addon (hidden by default) -->
+      <div id="addonForm" style="display: none; margin-top: 12px; padding: 14px; background: white; border-radius: 12px; border: 1px solid #e5e7eb;">
+        <div class="row">
+          <div class="sheet-section" style="flex: 2">
+            <label>Pilih Menu Lain sebagai Addon</label>
+            <select class="input-modern" id="addon-select">
+              <option value="">-- Pilih menu --</option>
+            </select>
+          </div>
+          <div class="sheet-section" style="flex: 1">
+            <label>Harga Tambahan</label>
+            <div class="price-group">
+              <div class="price-prefix">Rp</div>
+              <input type="number" id="addon-price" min="0" placeholder="0" />
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; margin-top: 10px;">
+          <button type="button" class="btn-save" style="flex: 1; padding: 10px; font-size: 14px;" onclick="confirmAddAddon()">Tambah</button>
+          <button type="button" class="icon-orange" style="width: auto; padding: 0 16px;" onclick="hideAddAddonForm()">Batal</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding: 20px">
+      <button class="btn-save" id="saveMenuBtn" onclick="saveMenu()">Simpan</button>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Load config.js -->
+  <script src="../js/config.js"></script>
+
+  <script>
+    // Check auth
+    if (!requireAuth()) {
+      window.location.href = 'login.html';
     }
 
-    closeSheet();
-  }
-</script>
+    // Global state
+    let mode = 'add';
+    let currentMenuId = null;
+    let myMenus = []; // Menu milik vendor ini
+    let allFoods = []; // Semua foods (untuk addon options)
+    let selectedAddons = []; // Addons yang dipilih untuk menu saat ini
+
+    // Init
+    document.addEventListener('DOMContentLoaded', function() {
+      fetchMyMenus();
+      setupEventListeners();
+    });
+
+    // ═══════════════════════════════════════════════════
+    // FETCH MENUS
+    // ═══════════════════════════════════════════════════
+    async function fetchMyMenus() {
+      const container = document.getElementById('menuContainer');
+      container.innerHTML = '<div class="loading-state"><i class="fas fa-spinner"></i><p>Memuat menu...</p></div>';
+
+      try {
+        const vendor = getVendorData();
+        if (!vendor || !vendor.id) {
+          throw new Error('Data vendor tidak ditemukan. Silakan login ulang.');
+        }
+
+        // ✅ Fetch hanya foods milik vendor ini
+        const { response, data } = await fetchWithAuth(
+          `${API_CONFIG.ENDPOINTS.FOODS_BY_VENDOR}/${vendor.id}?per_page=100`
+        );
+
+        if (response.ok && data.success) {
+          myMenus = data.data || [];
+          renderMenus(myMenus);
+        } else {
+          throw new Error(data.message || 'Gagal mengambil data menu');
+        }
+      } catch (error) {
+        console.error('Fetch menus error:', error);
+        container.innerHTML = `
+          <div class="empty-state">
+            <i class="fas fa-exclamation-triangle"></i>
+            <h3>Gagal memuat menu</h3>
+            <p>${error.message}</p>
+            <button onclick="fetchMyMenus()" style="margin-top: 15px; padding: 10px 20px; background: linear-gradient(90deg, #ffa83f, #ff5e25); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+              Coba Lagi
+            </button>
+          </div>
+        `;
+      }
+    }
+
+    // Fetch semua foods (untuk addon options)
+    async function fetchAllFoods() {
+      try {
+        const { response, data } = await fetchWithAuth(`${API_CONFIG.ENDPOINTS.FOODS}?per_page=500`);
+        if (response.ok && data.success) {
+          allFoods = data.data || [];
+        }
+      } catch (error) {
+        console.error('Fetch all foods error:', error);
+      }
+    }
+
+    // ═══════════════════════════════════════════════════
+    // RENDER MENUS
+    // ═══════════════════════════════════════════════════
+    function renderMenus(menus) {
+      const container = document.getElementById('menuContainer');
+
+      if (!menus || menus.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <i class="fas fa-utensils"></i>
+            <h3>Belum ada menu</h3>
+            <p>Klik tombol "Tambah" untuk menambahkan menu pertama Anda</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = '';
+      menus.forEach(menu => {
+        const card = createMenuCard(menu);
+        container.appendChild(card);
+      });
+    }
+
+    function createMenuCard(menu) {
+      const card = document.createElement('div');
+      card.className = 'menu-card';
+      card.dataset.id = menu.id;
+
+      // ✅ Fix image URL
+      const imageUrl = menu.image
+        ? `${API_CONFIG.BASE_URL.replace('/api', '')}/storage/${menu.image}`
+        : '../images/assets/menu.png';
+
+      const priceFormatted = parseInt(menu.price).toLocaleString('id-ID');
+      const typeLabels = { 'FOOD': 'Makanan', 'DRINK': 'Minuman', 'SNACK': 'Snack', 'PRASMANAN': 'Prasmanan' };
+      const typeLabel = typeLabels[menu.type] || menu.type;
+
+      card.innerHTML = `
+        <div class="menu-left">
+          <img src="${imageUrl}" alt="${menu.name}" onerror="this.src='../images/assets/menu.png'" />
+          <div class="menu-info">
+            <div class="menu-name">${menu.name}</div>
+            <div class="price">Rp ${priceFormatted}</div>
+            <span class="menu-type-badge">${typeLabel}</span>
+          </div>
+        </div>
+
+        <div class="menu-right">
+          <div class="action-icons">
+            <button class="icon-btn edit" title="Edit">✏️</button>
+            <button class="icon-btn delete" title="Hapus">🗑️</button>
+          </div>
+          <label class="switch" title="${menu.active ? 'Aktif' : 'Nonaktif'}">
+            <input type="checkbox" ${menu.active ? 'checked' : ''} />
+            <span class="slider"></span>
+          </label>
+        </div>
+      `;
+
+      card.querySelector('.edit').onclick = () => openEdit(menu);
+      card.querySelector('.delete').onclick = () => deleteMenu(menu.id, menu.name);
+      card.querySelector('input[type="checkbox"]').onchange = (e) => toggleActive(menu.id, e.target.checked);
+
+      return card;
+    }
+
+    // ═══════════════════════════════════════════════════
+    // EVENT LISTENERS
+    // ═══════════════════════════════════════════════════
+    function setupEventListeners() {
+      const addBtn = document.getElementById('addMenuBtn');
+      if (addBtn) addBtn.onclick = openTambah;
+
+      const imageInput = document.getElementById('image-input');
+      if (imageInput) {
+        imageInput.addEventListener('change', function() {
+          const file = this.files[0];
+          if (!file) return;
+
+          if (file.size > 2 * 1024 * 1024) {
+            showToast('Ukuran file maksimal 2 MB!', 'error');
+            this.value = '';
+            return;
+          }
+
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            document.getElementById('preview-image').src = e.target.result;
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+    }
+
+    // ═══════════════════════════════════════════════════
+    // OPEN/CLOSE SHEET
+    // ═══════════════════════════════════════════════════
+    function openTambah() {
+      mode = 'add';
+      currentMenuId = null;
+      selectedAddons = [];
+
+      document.getElementById('sheet-title').innerText = 'Tambah Menu';
+      document.getElementById('sheet-name').value = '';
+      document.getElementById('sheet-price-input').value = '';
+      document.getElementById('sheet-estimated-time').value = '15';
+      document.getElementById('sheet-category').value = 'FOOD';
+      document.getElementById('preview-image').src = '../images/assets/menu.png';
+      document.getElementById('image-input').value = '';
+
+      // Reset taste
+      ['manis', 'pahit', 'asin', 'asam', 'pedas'].forEach(t => {
+        document.getElementById(`taste-${t}`).value = '0';
+      });
+
+      renderAddonList();
+      openSheet();
+    }
+
+    async function openEdit(menu) {
+      mode = 'edit';
+      currentMenuId = menu.id;
+      selectedAddons = [];
+
+      // Fetch all foods untuk addon options
+      await fetchAllFoods();
+
+      // Load addons yang sudah ada dari menu
+      if (menu.addons && Array.isArray(menu.addons)) {
+        selectedAddons = menu.addons.map(a => ({
+          addons_id: a.addon ? a.addon.id : a.id,
+          name: a.addon ? a.addon.name : a.name,
+          extra_price: a.pivot ? a.pivot.extra_price : (a.extra_price || 0)
+        }));
+      }
+
+      document.getElementById('sheet-title').innerText = 'Edit Menu';
+      document.getElementById('sheet-name').value = menu.name || '';
+      document.getElementById('sheet-price-input').value = menu.price || '';
+      document.getElementById('sheet-estimated-time').value = menu.estimated_time || 15;
+      document.getElementById('sheet-category').value = menu.type || 'FOOD';
+
+      const imageUrl = menu.image
+        ? `${API_CONFIG.BASE_URL.replace('/api', '')}/storage/${menu.image}`
+        : '../images/assets/menu.png';
+      document.getElementById('preview-image').src = imageUrl;
+      document.getElementById('image-input').value = '';
+
+      // Set taste values
+      document.getElementById('taste-manis').value = menu.Manis || 0;
+      document.getElementById('taste-pahit').value = menu.Pahit || 0;
+      document.getElementById('taste-asin').value = menu.Asin || 0;
+      document.getElementById('taste-asam').value = menu.Asam || 0;
+      document.getElementById('taste-pedas').value = menu.Pedas || 0;
+
+      renderAddonList();
+      openSheet();
+    }
+
+    function openSheet() {
+      document.getElementById('bottom-sheet').classList.add('open');
+      document.getElementById('sheet-overlay').classList.add('open');
+    }
+
+    function closeSheet() {
+      document.getElementById('bottom-sheet').classList.remove('open');
+      document.getElementById('sheet-overlay').classList.remove('open');
+      hideAddAddonForm();
+    }
+
+    // ═══════════════════════════════════════════════════
+    // ADDONS MANAGEMENT
+    // ═══════════════════════════════════════════════════
+    async function showAddAddonForm() {
+      // Fetch all foods jika belum
+      if (allFoods.length === 0) {
+        await fetchAllFoods();
+      }
+
+      const select = document.getElementById('addon-select');
+      select.innerHTML = '<option value="">-- Pilih menu --</option>';
+
+      // Filter: hanya tampilkan foods yang belum dipilih sebagai addon
+      const availableFoods = allFoods.filter(f => {
+        // Jangan tampilkan menu yang sedang di-edit
+        if (mode === 'edit' && f.id === currentMenuId) return false;
+        // Jangan tampilkan yang sudah dipilih
+        if (selectedAddons.some(a => a.addons_id === f.id)) return false;
+        return true;
+      });
+
+      availableFoods.forEach(f => {
+        const opt = document.createElement('option');
+        opt.value = f.id;
+        opt.textContent = f.name;
+        select.appendChild(opt);
+      });
+
+      document.getElementById('addon-price').value = '';
+      document.getElementById('addonForm').style.display = 'block';
+    }
+
+    function hideAddAddonForm() {
+      document.getElementById('addonForm').style.display = 'none';
+    }
+
+    function confirmAddAddon() {
+      const select = document.getElementById('addon-select');
+      const priceInput = document.getElementById('addon-price');
+
+      const addons_id = parseInt(select.value);
+      const extra_price = parseInt(priceInput.value) || 0;
+
+      if (!addons_id) {
+        showToast('Pilih menu untuk addon!', 'error');
+        return;
+      }
+
+      const selectedFood = allFoods.find(f => f.id === addons_id);
+      if (!selectedFood) {
+        showToast('Menu tidak ditemukan!', 'error');
+        return;
+      }
+
+      selectedAddons.push({
+        addons_id: addons_id,
+        name: selectedFood.name,
+        extra_price: extra_price
+      });
+
+      renderAddonList();
+      hideAddAddonForm();
+      showToast('Addon ditambahkan', 'success');
+    }
+
+    function removeAddon(index) {
+      selectedAddons.splice(index, 1);
+      renderAddonList();
+    }
+
+    function renderAddonList() {
+      const list = document.getElementById('addonList');
+      if (selectedAddons.length === 0) {
+        list.innerHTML = '<p style="color: #999; font-size: 13px; text-align: center; padding: 10px;">Belum ada addon</p>';
+        return;
+      }
+
+      list.innerHTML = selectedAddons.map((addon, index) => `
+        <div class="extra-item">
+          <div class="extra-item-info">
+            <div class="extra-item-name">${addon.name}</div>
+            <div class="extra-item-price">+ Rp ${(addon.extra_price || 0).toLocaleString('id-ID')}</div>
+          </div>
+          <button class="extra-item-remove" onclick="removeAddon(${index})">✕</button>
+        </div>
+      `).join('');
+    }
+
+    // ═══════════════════════════════════════════════════
+    // SAVE MENU
+    // ═══════════════════════════════════════════════════
+    async function saveMenu() {
+      const name = document.getElementById('sheet-name').value.trim();
+      const price = document.getElementById('sheet-price-input').value;
+      const estimatedTime = document.getElementById('sheet-estimated-time').value;
+      const category = document.getElementById('sheet-category').value;
+      const imageInput = document.getElementById('image-input');
+      const saveBtn = document.getElementById('saveMenuBtn');
+
+      // Validasi
+      if (!name) { showToast('Nama menu wajib diisi!', 'error'); return; }
+      if (!price || price < 0) { showToast('Harga tidak valid!', 'error'); return; }
+      if (!estimatedTime || estimatedTime < 1) { showToast('Estimasi waktu minimal 1 menit!', 'error'); return; }
+
+      saveBtn.disabled = true;
+      saveBtn.innerText = 'Menyimpan...';
+
+      try {
+        const formData = new FormData();
+        formData.append('name', name);
+        formData.append('price', price);
+        formData.append('type', category);
+        formData.append('estimated_time', estimatedTime);
+        formData.append('active', '1');
+
+        // Taste attributes (optional)
+        formData.append('Manis', document.getElementById('taste-manis').value || '0');
+        formData.append('Pahit', document.getElementById('taste-pahit').value || '0');
+        formData.append('Asin', document.getElementById('taste-asin').value || '0');
+        formData.append('Asam', document.getElementById('taste-asam').value || '0');
+        formData.append('Pedas', document.getElementById('taste-pedas').value || '0');
+
+        if (imageInput.files[0]) {
+          formData.append('image', imageInput.files[0]);
+        }
+
+        let response, data;
+
+        if (mode === 'add') {
+          // ✅ POST untuk create
+          const result = await fetchWithAuth(API_CONFIG.ENDPOINTS.FOOD_CREATE, {
+            method: 'POST',
+            body: formData
+          });
+          response = result.response;
+          data = result.data;
+        } else if (mode === 'edit' && currentMenuId) {
+          // ✅ POST dengan _method: PUT untuk update (karena FormData)
+          formData.append('_method', 'PUT');
+          const result = await fetchWithAuth(`${API_CONFIG.ENDPOINTS.FOOD_UPDATE}/${currentMenuId}`, {
+            method: 'POST',
+            body: formData
+          });
+          response = result.response;
+          data = result.data;
+        }
+
+        if (response.ok && data.success) {
+          const newFoodId = data.data ? data.data.id : currentMenuId;
+
+          // ✅ Save addons jika ada (hanya untuk mode add atau setelah update berhasil)
+          if (selectedAddons.length > 0 && newFoodId) {
+            for (const addon of selectedAddons) {
+              try {
+                await fetchWithAuth(`${API_CONFIG.ENDPOINTS.FOOD_CREATE}/${newFoodId}/addons`, {
+                  method: 'POST',
+                  body: JSON.stringify({
+                    addons_id: addon.addons_id,
+                    extra_price: addon.extra_price
+                  })
+                });
+              } catch (err) {
+                console.error('Error adding addon:', err);
+              }
+            }
+          }
+
+          showToast(
+            mode === 'add' ? 'Menu berhasil ditambahkan!' : 'Menu berhasil diupdate!',
+            'success'
+          );
+          await fetchMyMenus();
+          closeSheet();
+        } else {
+          if (data.errors) {
+            const errorMessages = Object.values(data.errors).flat().join('\n');
+            showToast(errorMessages, 'error');
+          } else {
+            showToast(data.message || 'Gagal menyimpan menu', 'error');
+          }
+        }
+      } catch (error) {
+        console.error('Save menu error:', error);
+        showToast('Terjadi kesalahan. Silakan coba lagi.', 'error');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerText = 'Simpan';
+      }
+    }
+
+    // ═══════════════════════════════════════════════════
+    // DELETE MENU
+    // ═══════════════════════════════════════════════════
+    async function deleteMenu(id, name) {
+      if (!confirm(`Yakin ingin menghapus menu "${name}"?\n\nMenu yang sudah dipesan customer tidak bisa dihapus.`)) {
+        return;
+      }
+
+      try {
+        const { response, data } = await fetchWithAuth(
+          `${API_CONFIG.ENDPOINTS.FOOD_DELETE}/${id}`,
+          { method: 'DELETE' }
+        );
+
+        if (response.ok && data.success) {
+          showToast('Menu berhasil dihapus!', 'success');
+          await fetchMyMenus();
+        } else {
+          if (response.status === 409) {
+            showToast('Menu tidak bisa dihapus karena masih ada di pesanan', 'error');
+          } else {
+            showToast(data.message || 'Gagal menghapus menu', 'error');
+          }
+        }
+      } catch (error) {
+        console.error('Delete menu error:', error);
+        showToast('Terjadi kesalahan. Silakan coba lagi.', 'error');
+      }
+    }
+
+    // ═══════════════════════════════════════════════════
+    // TOGGLE ACTIVE
+    // ═══════════════════════════════════════════════════
+    async function toggleActive(id, active) {
+      try {
+        const formData = new FormData();
+        formData.append('active', active ? '1' : '0');
+        formData.append('_method', 'PUT');
+
+        const { response, data } = await fetchWithAuth(
+          `${API_CONFIG.ENDPOINTS.FOOD_UPDATE}/${id}`,
+          { method: 'POST', body: formData }
+        );
+
+        if (response.ok && data.success) {
+          showToast(active ? 'Menu diaktifkan' : 'Menu dinonaktifkan', 'success');
+        } else {
+          showToast(data.message || 'Gagal mengubah status', 'error');
+          await fetchMyMenus(); // Reload untuk reset state
+        }
+      } catch (error) {
+        console.error('Toggle active error:', error);
+        showToast('Terjadi kesalahan', 'error');
+        await fetchMyMenus();
+      }
+    }
+
+    // ═══════════════════════════════════════════════════
+    // TOAST & LOGOUT
+    // ═══════════════════════════════════════════════════
+    function showToast(message, type = 'info') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `toast ${type} show`;
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    function handleLogout() {
+      if (confirm('Yakin ingin logout?')) {
+        removeToken();
+        window.location.href = 'login.html';
+      }
+    }
+  </script>
+</body>
+</html>

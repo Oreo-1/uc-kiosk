@@ -85,7 +85,7 @@ class OrderController extends Controller
         try {
             $validated = $request->validate([
                 'dining_type'  => ['required', Rule::in(['TAKEAWAY', 'DINEIN'])],
-                'notes_order'  => ['nullable', 'string'], // ✅ Tambahan notes_order
+                'notes_order'  => ['nullable', 'string'],
                 'foods'        => ['required', 'array', 'min:1'],
                 'foods.*.food_id'  => ['required', 'integer', 'exists:food,id'],
                 'foods.*.quantity' => ['required', 'integer', 'min:1'],
@@ -162,21 +162,21 @@ class OrderController extends Controller
 
             $order = DB::transaction(function () use ($vendorId, $validated, $queueNumber, $totalPrice, $totalEstimated, $orderFoods) {
                 $order = Order::create([
-                    'vendor_id'      => $vendorId,
-                    'dining_type'    => $validated['dining_type'],
-                    'notes_order'    => $validated['notes_order'] ?? null, // ✅ Simpan ke database
-                    'status'         => 'ONPROGRESS',
-                    'queue_number'   => $queueNumber,
-                    'total_price'    => $totalPrice,
-                    'total_estimated'=> $totalEstimated,
+                    'vendor_id'       => $vendorId,
+                    'dining_type'     => $validated['dining_type'],
+                    'notes_order'     => $validated['notes_order'] ?? null,
+                    'status'          => 'PENDING', // ✅ Status default PENDING
+                    'queue_number'    => $queueNumber,
+                    'total_price'     => $totalPrice,
+                    'total_estimated' => $totalEstimated,
                 ]);
 
                 foreach ($orderFoods as $foodItem) {
                     $order->foods()->attach($foodItem['food_id'], [
-                        'quantity'    => $foodItem['quantity'],
-                        'total_price' => $foodItem['total_price'],
-                        'notes'       => $foodItem['notes'],
-                        'parent_food_id'   => null,
+                        'quantity'       => $foodItem['quantity'],
+                        'total_price'    => $foodItem['total_price'],
+                        'notes'          => $foodItem['notes'],
+                        'parent_food_id' => null,
                     ]);
                 }
 
@@ -278,9 +278,42 @@ class OrderController extends Controller
                 ], 403);
             }
 
+            // ✅ Validasi status yang diizinkan
             $validated = $request->validate([
-                'status' => ['required', Rule::in(['DONE', 'ONPROGRESS'])],
+                'status' => [
+                    'required',
+                    Rule::in(['PENDING', 'ONPROGRESS', 'DIANTAR', 'DONE', 'CANCELLED'])
+                ],
             ]);
+
+            // ✅ Validasi transisi status yang valid
+            $validTransitions = [
+                'PENDING'    => ['ONPROGRESS', 'CANCELLED'],
+                'ONPROGRESS' => ['DIANTAR', 'CANCELLED'],
+                'DIANTAR'    => ['DONE', 'CANCELLED'],
+                'DONE'       => [],
+                'CANCELLED'  => [],
+            ];
+
+            $currentStatus = $order->status;
+            $newStatus = $validated['status'];
+
+            // Cek apakah status sama
+            if ($currentStatus === $newStatus) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Status is already ' . $newStatus
+                ], 400);
+            }
+
+            // Cek apakah transisi valid
+            if (!in_array($newStatus, $validTransitions[$currentStatus] ?? [])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid status transition.',
+                    'error' => "Cannot change status from {$currentStatus} to {$newStatus}."
+                ], 400);
+            }
 
             $order->update(['status' => $validated['status']]);
 
@@ -291,7 +324,11 @@ class OrderController extends Controller
             ], 200);
 
         } catch (ValidationException $e) {
-            return response()->json(['success' => false, 'message' => 'Validation failed.', 'errors' => $e->errors()], 422);
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $e->errors()
+            ], 422);
         } catch (ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
@@ -300,7 +337,11 @@ class OrderController extends Controller
             ], 404);
         } catch (Throwable $e) {
             Log::error('Update order status failed:', ['error' => $e->getMessage()]);
-            return response()->json(['success' => false, 'message' => 'Update failed.', 'error' => config('app.debug') === true ? $e->getMessage() : 'Internal server error.'], 500);
+            return response()->json([
+                'success' => false,
+                'message' => 'Update failed.',
+                'error' => config('app.debug') === true ? $e->getMessage() : 'Internal server error.'
+            ], 500);
         }
     }
 
@@ -375,11 +416,11 @@ class OrderController extends Controller
     public function byStatus(Request $request, $status)
     {
         try {
-            if (!in_array($status, ['DONE', 'ONPROGRESS'])) {
+            if (!in_array($status, ['PENDING', 'ONPROGRESS', 'DIANTAR', 'DONE', 'CANCELLED'])) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Invalid status.',
-                    'error' => 'Status must be DONE or ONPROGRESS.'
+                    'error' => 'Status must be PENDING, ONPROGRESS, DIANTAR, DONE, or CANCELLED.'
                 ], 400);
             }
 
@@ -420,7 +461,7 @@ class OrderController extends Controller
     }
 
     // ─────────────────────────────────────────────────────
-    // ✅ MIDTRANS PAYMENT METHODS (TAMBAHAN BARU)
+    // ✅ MIDTRANS PAYMENT METHODS
     // ─────────────────────────────────────────────────────
 
     /**
@@ -438,7 +479,6 @@ class OrderController extends Controller
                 'items' => 'required|array'
             ]);
 
-            // Setup Midtrans
             \Midtrans\Config::$serverKey = env('MIDTRANS_SERVER_KEY');
             \Midtrans\Config::$isProduction = env('MIDTRANS_IS_PRODUCTION', false);
             \Midtrans\Config::$isSanitized = true;
@@ -492,7 +532,6 @@ class OrderController extends Controller
                 'gross_amount' => 'required|numeric',
             ]);
 
-            // Setup Midtrans
             \Midtrans\Config::$serverKey = env('MIDTRANS_SERVER_KEY');
             \Midtrans\Config::$isProduction = env('MIDTRANS_IS_PRODUCTION', false);
             \Midtrans\Config::$isSanitized = true;
@@ -534,13 +573,13 @@ class OrderController extends Controller
         try {
             $notification = new \Midtrans\Notification();
             
-            \Log::info("Midtrans Notification - Order: {$notification->order_id}, Status: {$notification->transaction_status}");
+            Log::info("Midtrans Notification - Order: {$notification->order_id}, Status: {$notification->transaction_status}");
             
             // TODO: Update status order di database berdasarkan notification->order_id
             
             return response()->json(['status' => 'success']);
         } catch (\Exception $e) {
-            \Log::error("Midtrans notification error: " . $e->getMessage());
+            Log::error("Midtrans notification error: " . $e->getMessage());
             return response()->json(['status' => 'error'], 500);
         }
     }
