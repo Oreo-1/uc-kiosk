@@ -24,9 +24,13 @@ use App\Http\Controllers\OrderController;
     // List & Create Orders
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
     Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
-
+    // Add this line to your API routes
+// routes/api.php
+Route::get('/orders/by-hash/{hash}', [OrderController::class, 'showByHash']);
     // View Single Order
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+    // Rute untuk mengupdate block_hash setelah anchoring berhasil
+Route::patch('/orders/{id}/update-hash', [OrderController::class, 'updateHash']);
 
 
 

@@ -171,6 +171,13 @@ class OrderController extends Controller
                     'total_estimated'=> $totalEstimated,
                 ]);
 
+                // ✅ LOGIKA BARU: GENERATE BLOCKCHAIN HASH
+                // Formula: ID + TOTAL + SALT
+                $salt = "UC_MAKASSAR_SECRET_2024"; 
+                $hashData = $order->id . $order->total_price . $salt;
+                $order->blockchain_hash = "0x" . hash('sha256', $hashData);
+                $order->save();
+
                 foreach ($orderFoods as $foodItem) {
                     $order->foods()->attach($foodItem['food_id'], [
                         'quantity'    => $foodItem['quantity'],
@@ -224,6 +231,7 @@ class OrderController extends Controller
             ], 500);
         }
     }
+
 
     /**
      * Display the specified order (PUBLIC).
@@ -544,4 +552,89 @@ class OrderController extends Controller
             return response()->json(['status' => 'error'], 500);
         }
     }
+
+public function getByHash($hash)
+{
+    try {
+        // Cari order berdasarkan hash (pastikan kolomnya blockchain_hash)
+        $order = \App\Models\Order::where('blockchain_hash', $hash)
+            ->with(['foods'])
+            ->first();
+
+        if (!$order) {
+            return response()->json(['success' => false, 'message' => 'Hash tidak ditemukan'], 404);
+        }
+
+        // --- PROSES MAPPING DATA ---
+        
+        // 1. Ubah array 'foods' menjadi string 'items' yang rapi
+        // Contoh: "1x Mie jawa, 2x Es Teh"
+        $itemsString = $order->foods->map(function($f) {
+            $qty = $f->pivot->quantity ?? 1;
+            return $qty . "x " . $f->name;
+        })->implode(', ');
+
+        // 2. Kirim JSON dengan format yang diminta scanner
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'items'        => $itemsString,                 // <--- JavaScript panggil ini
+                'notes'        => $order->notes_order ?? '-',   // <--- JavaScript panggil ini
+                'queue_number' => $order->queue_number,
+                'total_price'  => number_format($order->total_price, 0, ',', '.')
+            ]
+        ]);
+
+    } catch (\Throwable $e) {
+        return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+    }
+}
+
+// app/Http/Controllers/OrderController.php
+
+public function showByHash($hash)
+{
+    // 1. Cari order berdasarkan block_hash
+    // 2. Gunakan with('foods') untuk mengambil data makanan di dalam order tersebut
+    $order = Order::with(['foods' => function($query) {
+        // Jika Anda ingin memastikan detail vendor juga ikut terbawa:
+        $query->with('vendor'); 
+    }])
+    ->where('block_hash', $hash)
+    ->first();
+
+    // Jika tidak ditemukan
+    if (!$order) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Order dengan hash tersebut tidak ditemukan.'
+        ], 404);
+    }
+
+    // Jika ditemukan, kembalikan data lengkap
+    return response()->json([
+        'success' => true,
+        'data' => $order
+    ], 200);
+}
+
+public function updateHash(Request $request, $id)
+{
+    try {
+        $order = \App\Models\Order::findOrFail($id);
+        
+        // Update kolom block_hash
+        $order->update([
+            'block_hash' => $request->block_hash
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Database updated with blockchain hash'
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+    }
+}
+
 }

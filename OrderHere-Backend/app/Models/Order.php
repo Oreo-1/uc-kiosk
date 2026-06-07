@@ -22,6 +22,7 @@ class Order extends Model
         'queue_number',
         'total_price',
         'total_estimated',
+        'block_hash',
     ];
 
     // Relasi ke vendor
