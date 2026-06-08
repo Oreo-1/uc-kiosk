@@ -9,14 +9,18 @@ class Food extends Model
 {
     use HasFactory;
 
-    // ✅ Nama tabel yang benar
     protected $table = 'food';
 
+    // ✅ TAMBAHKAN SEMUA FIELD YANG BOLEH DI-MASS-ASSIGN
     protected $fillable = [
         'vendor_id',
         'name',
+        'type',              // ✅ TAMBAH
         'price',
+        'description',       // ✅ TAMBAH
+        'image',             // ✅ TAMBAH
         'estimated_time',
+        'flavor_attribute',  // ✅ TAMBAH
         'active',
         'Manis',
         'Pahit',
@@ -25,17 +29,23 @@ class Food extends Model
         'Pedas',
     ];
 
+    // ✅ Cast untuk boolean & numeric
+    protected $casts = [
+        'active' => 'boolean',
+        'price' => 'decimal:2',
+        'estimated_time' => 'integer',
+        'Manis' => 'integer',
+        'Pahit' => 'integer',
+        'Asin' => 'integer',
+        'Asam' => 'integer',
+        'Pedas' => 'integer',
+    ];
+
     public function vendor()
     {
         return $this->belongsTo(Vendor::class, 'vendor_id');
     }
 
-        public function addons()
-    {
-        // Jika satu makanan memiliki banyak addon
-        return $this->hasMany(FoodAddon::class, 'food_id');
-    }
-    
 public function orders()
 {
     return $this->belongsToMany(Order::class, 'order_food', 'food_id', 'order_id')
