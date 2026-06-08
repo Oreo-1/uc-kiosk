@@ -136,35 +136,22 @@ class FoodController extends Controller
         try {
             $validated = $request->validate([
                 'name'             => ['required', 'string', 'max:45', 'unique:food,name'],
-                // ✅ FIX: ENUM value sesuai database
+                // ✅ ENUM sesuai database
                 'type'             => ['required', Rule::in(['KARBO', 'MINUMAN', 'SAYUR', 'LAINNYA', 'SNACK', 'LAUK'])],
                 'price'            => ['required', 'numeric', 'min:0'],
                 'description'      => ['nullable', 'string', 'max:255'],
                 'image'            => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:2048'],
                 'estimated_time'   => ['required', 'integer', 'min:1'],
                 'flavor_attribute' => ['nullable', Rule::in(['SENANG', 'SEDIH', 'MARAH', 'DATAR'])],
-                // ✅ TAMBAH: Validasi field taste
-                'Manis'            => ['nullable', 'integer', 'min:0', 'max:10'],
-                'Pahit'            => ['nullable', 'integer', 'min:0', 'max:10'],
-                'Asin'             => ['nullable', 'integer', 'min:0', 'max:10'],
-                'Asam'             => ['nullable', 'integer', 'min:0', 'max:10'],
-                'Pedas'            => ['nullable', 'integer', 'min:0', 'max:10'],
                 'active'           => ['nullable'],
             ]);
 
-            // ✅ FIX: Normalisasi boolean 'active'
+            // ✅ Normalisasi boolean 'active'
             if (isset($validated['active'])) {
                 $validated['active'] = filter_var($validated['active'], FILTER_VALIDATE_BOOLEAN);
             } else {
-                $validated['active'] = true; // Default aktif
+                $validated['active'] = true;
             }
-
-            // ✅ FIX: Set default taste ke 0 jika tidak diisi
-            $validated['Manis'] = $validated['Manis'] ?? 0;
-            $validated['Pahit'] = $validated['Pahit'] ?? 0;
-            $validated['Asin'] = $validated['Asin'] ?? 0;
-            $validated['Asam'] = $validated['Asam'] ?? 0;
-            $validated['Pedas'] = $validated['Pedas'] ?? 0;
 
             // ✅ Upload image jika ada
             if ($request->hasFile('image')) {
@@ -253,19 +240,12 @@ class FoodController extends Controller
 
             $validated = $request->validate([
                 'name'             => ['nullable', 'string', 'max:45', Rule::unique('food', 'name')->ignore($food->id)],
-                // ✅ FIX: ENUM value sesuai database
                 'type'             => ['nullable', Rule::in(['KARBO', 'MINUMAN', 'SAYUR', 'LAINNYA', 'SNACK', 'LAUK'])],
                 'price'            => ['nullable', 'numeric', 'min:0'],
                 'description'      => ['nullable', 'string', 'max:255'],
                 'image'            => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:2048'],
                 'estimated_time'   => ['nullable', 'integer', 'min:1'],
                 'flavor_attribute' => ['nullable', Rule::in(['SENANG', 'SEDIH', 'MARAH', 'DATAR'])],
-                // ✅ TAMBAH: Validasi field taste
-                'Manis'            => ['nullable', 'integer', 'min:0', 'max:10'],
-                'Pahit'            => ['nullable', 'integer', 'min:0', 'max:10'],
-                'Asin'             => ['nullable', 'integer', 'min:0', 'max:10'],
-                'Asam'             => ['nullable', 'integer', 'min:0', 'max:10'],
-                'Pedas'            => ['nullable', 'integer', 'min:0', 'max:10'],
                 'active'           => ['nullable'],
             ]);
 

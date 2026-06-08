@@ -11,22 +11,17 @@ class Food extends Model
 
     protected $table = 'food';
 
-    // ✅ TAMBAHKAN SEMUA FIELD YANG BOLEH DI-MASS-ASSIGN
+    // ✅ HANYA field yang ADA di database (tanpa taste fields)
     protected $fillable = [
         'vendor_id',
         'name',
-        'type',              // ✅ TAMBAH
+        'type',
         'price',
-        'description',       // ✅ TAMBAH
-        'image',             // ✅ TAMBAH
+        'description',
+        'image',
         'estimated_time',
-        'flavor_attribute',  // ✅ TAMBAH
+        'flavor_attribute',
         'active',
-        'Manis',
-        'Pahit',
-        'Asin',
-        'Asam',
-        'Pedas',
     ];
 
     // ✅ Cast untuk boolean & numeric
@@ -34,21 +29,35 @@ class Food extends Model
         'active' => 'boolean',
         'price' => 'decimal:2',
         'estimated_time' => 'integer',
-        'Manis' => 'integer',
-        'Pahit' => 'integer',
-        'Asin' => 'integer',
-        'Asam' => 'integer',
-        'Pedas' => 'integer',
     ];
 
+    // ═══════════════════════════════════════
+    // RELATIONS
+    // ═══════════════════════════════════════
+
+    /**
+     * Relasi ke Vendor (many-to-one)
+     */
     public function vendor()
     {
         return $this->belongsTo(Vendor::class, 'vendor_id');
     }
 
-public function orders()
-{
-    return $this->belongsToMany(Order::class, 'order_food', 'food_id', 'order_id')
-        ->withPivot('quantity', 'total_price', 'notes', 'parent_food_id');
-}
+    /**
+     * Relasi ke Order (many-to-many via order_food pivot)
+     */
+    public function orders()
+    {
+        return $this->belongsToMany(Order::class, 'order_food', 'food_id', 'order_id')
+            ->withPivot('quantity', 'total_price', 'notes', 'parent_food_id');
+    }
+
+    /**
+     * Relasi ke FoodAddon (one-to-many)
+     * ✅ TAMBAH: Dipanggil oleh FoodController (addons.addon)
+     */
+    public function addons()
+    {
+        return $this->hasMany(FoodAddon::class, 'food_id', 'id');
+    }
 }
