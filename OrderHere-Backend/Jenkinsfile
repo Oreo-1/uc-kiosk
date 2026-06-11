@@ -1,0 +1,81 @@
+pipeline {
+    agent any
+    
+    options {
+        disableConcurrentBuilds()
+        timeout(time: 30, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+    
+    environment {
+        DEPLOY_PATH = '/var/www/orderhere-backend'
+        REPO_URL = 'https://github.com/leowidj/OrderHere-Backend.git'
+    }
+    
+    stages {
+        stage(' Checkout Code') {
+            steps {
+                echo 'Cloning repository dari GitHub...'
+                git branch: 'main',
+                    credentialsId: 'github-credentials',
+                    url: "${REPO_URL}"
+            }
+        }
+        
+        stage('📦 Install Dependencies') {
+            steps {
+                echo 'Installing Composer dependencies...'
+                sh 'composer install --no-dev --optimize-autoloader --no-interaction'
+            }
+        }
+        
+        stage('️ Clear Cache') {
+            steps {
+                echo 'Clearing Laravel cache...'
+                sh '''
+                    php artisan config:clear
+                    php artisan route:clear
+                    php artisan cache:clear
+                    php artisan view:clear
+                '''
+            }
+        }
+        
+        stage('🗄️ Run Migrations') {
+            steps {
+                echo 'Running database migrations...'
+                sh 'php artisan migrate --force'
+            }
+        }
+        
+        stage(' Optimize Application') {
+            steps {
+                echo 'Optimizing Laravel...'
+                sh '''
+                    php artisan config:cache
+                    php artisan route:cache
+                    php artisan view:cache
+                '''
+            }
+        }
+        
+        stage(' Set Permissions') {
+            steps {
+                echo 'Setting file permissions...'
+                sh '''
+                    chmod -R 775 storage bootstrap/cache
+                    chown -R www-data:www-data storage bootstrap/cache 2>/dev/null || true
+                '''
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo '✅ Deploy BERHASIL!'
+        }
+        failure {
+            echo '❌ Deploy GAGAL! Cek log untuk detail.'
+        }
+    }
+}
