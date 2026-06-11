@@ -888,13 +888,25 @@
         } catch (err) { console.error("Load Data Fail:", err); }
       }
 
+// DAWG
+      const vendorLogos = {
+        6: "https://raw.githubusercontent.com/Oreo-1/uc-kiosk/refs/heads/main/OrderHere-Frontend/assets/order-page/WarungAw.png",
+        7: "https://raw.githubusercontent.com/Oreo-1/uc-kiosk/refs/heads/main/OrderHere-Frontend/assets/order-page/ChickonCup.png"
+      };
+
       function renderVendors(vendors) {
         const container = document.getElementById("vendor-container");
+
         container.innerHTML = vendors.map(v => `
           <div class="vendor-card" id="vendor-${v.id}" onclick="selectVendor(${v.id})">
-            <div class="vendor-logo">🏪</div>
+            <div class="vendor-logo">
+              ${vendorLogos[v.id]
+                ? `<img src="${vendorLogos[v.id]}" alt="${v.name}" />`
+                : "🏪"}
+            </div>
             <span class="vendor-name">${v.name}</span>
-          </div>`).join("");
+          </div>
+        `).join("");
       }
 
       function selectVendor(vendorId) {
