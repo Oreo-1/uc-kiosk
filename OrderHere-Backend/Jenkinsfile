@@ -9,25 +9,24 @@ pipeline {
     
     environment {
         DEPLOY_PATH = '/var/www/orderhere-backend'
+        COMPOSER_HOME = '/tmp/composer'
+        COMPOSER_ALLOW_SUPERUSER = '1'
     }
     
     stages {
-        stage('📥 Sync Code ke Deployment Folder') {
+        stage('Sync Code ke Deployment Folder') {
             steps {
                 echo 'Syncing code ke deployment folder...'
                 sh """
-                    # Pastikan deployment folder ada
                     mkdir -p ${DEPLOY_PATH}
-                    
-                    # Sync code dari workspace ke deployment folder
+                    mkdir -p ${COMPOSER_HOME}
                     rsync -av --exclude='.git' --exclude='node_modules' --exclude='vendor' ./ ${DEPLOY_PATH}/
-                    
-                    echo '✅ Code synced successfully!'
+                    echo 'Code synced successfully!'
                 """
             }
         }
         
-        stage('📦 Install Dependencies') {
+        stage('Install Dependencies') {
             steps {
                 echo 'Installing Composer dependencies...'
                 dir("${DEPLOY_PATH}") {
@@ -36,7 +35,7 @@ pipeline {
             }
         }
         
-        stage('🗑️ Clear Cache') {
+        stage('Clear Cache') {
             steps {
                 echo 'Clearing Laravel cache...'
                 dir("${DEPLOY_PATH}") {
@@ -50,7 +49,7 @@ pipeline {
             }
         }
         
-        stage('🗄️ Run Migrations') {
+        stage('Run Migrations') {
             steps {
                 echo 'Running database migrations...'
                 dir("${DEPLOY_PATH}") {
@@ -59,7 +58,7 @@ pipeline {
             }
         }
         
-        stage('⚡ Optimize Application') {
+        stage('Optimize Application') {
             steps {
                 echo 'Optimizing Laravel...'
                 dir("${DEPLOY_PATH}") {
@@ -72,7 +71,7 @@ pipeline {
             }
         }
         
-        stage('🔐 Set Permissions') {
+        stage('Set Permissions') {
             steps {
                 echo 'Setting file permissions...'
                 sh """
@@ -85,10 +84,10 @@ pipeline {
     
     post {
         success {
-            echo '✅ Deploy BERHASIL!'
+            echo 'Deploy BERHASIL!'
         }
         failure {
-            echo '❌ Deploy GAGAL! Cek log untuk detail.'
+            echo 'Deploy GAGAL! Cek log untuk detail.'
         }
     }
 }
