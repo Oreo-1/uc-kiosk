@@ -1,361 +1,299 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chick on Cup - Dashboard</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chick on Cup - Dashboard</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Segoe UI", sans-serif;
+      }
+      body {
+        background: #f5f5f5;
+        min-height: 100vh;
+        display: flex;
+      }
+      .container {
+        display: flex;
+        width: 100%;
+        min-height: 100vh;
+      }
 
-  <!-- FONT AWESOME -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
-    
-    body {
-      background: #f5f5f5;
-      min-height: 100vh;
-      display: flex;
-    }
-
-    .container {
-      display: flex;
-      width: 100%;
-      min-height: 100vh;
-    }
-
-    /* ═══════════════════════════════════════
-       SIDEBAR
-    ═══════════════════════════════════════ */
-    .sidebar {
-      width: 260px;
-      background: white;
-      box-shadow: 2px 0 10px rgba(0,0,0,0.05);
-      display: flex;
-      flex-direction: column;
-      padding: 30px 20px;
-      position: fixed;
-      height: 100vh;
-      z-index: 100;
-    }
-
-    .logo {
-      text-align: center;
-      margin-bottom: 40px;
-    }
-
-    .logo-img {
-      width: 80px;
-      height: 80px;
-      object-fit: contain;
-    }
-
-    .logo-text {
-      font-size: 24px;
-      font-weight: 800;
-      background: linear-gradient(90deg, #ffa83f, #ff5e25);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      margin-top: 10px;
-    }
-
-    .nav {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 14px 20px;
-      margin-bottom: 8px;
-      border: none;
-      background: transparent;
-      border-radius: 12px;
-      font-size: 15px;
-      font-weight: 600;
-      color: #666;
-      cursor: pointer;
-      transition: all 0.3s;
-      text-align: left;
-      width: 100%;
-    }
-
-    .nav:hover {
-      background: #fff3ed;
-      color: #ff5e25;
-    }
-
-    .nav.active {
-      background: linear-gradient(90deg, #ffa83f, #ff5e25);
-      color: white;
-      box-shadow: 0 4px 12px rgba(255, 94, 37, 0.3);
-    }
-
-    .nav i {
-      width: 20px;
-      text-align: center;
-    }
-
-    .logout-btn {
-      margin-top: auto;
-      background: #fff3ed;
-      color: #ff5e25;
-    }
-
-    .logout-btn:hover {
-      background: #ff5e25;
-      color: white;
-    }
-
-    /* ═══════════════════════════════════════
-       MAIN CONTENT
-    ═══════════════════════════════════════ */
-    #content {
-      flex: 1;
-      margin-left: 260px;
-      padding: 0;
-      min-height: 100vh;
-      background: #f5f5f5;
-    }
-
-    /* ═══════════════════════════════════════
-       LOADING STATE
-    ═══════════════════════════════════════ */
-    .loading-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 400px;
-      color: #999;
-    }
-
-    .loading-spinner {
-      width: 50px;
-      height: 50px;
-      border: 4px solid #f3f3f3;
-      border-top: 4px solid #ff5e25;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-bottom: 20px;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    /* ═══════════════════════════════════════
-       ERROR STATE
-    ═══════════════════════════════════════ */
-    .error-container {
-      text-align: center;
-      padding: 60px 20px;
-      color: #666;
-    }
-
-    .error-container i {
-      font-size: 64px;
-      color: #ff5e25;
-      margin-bottom: 20px;
-    }
-
-    .error-container h2 {
-      margin-bottom: 10px;
-      color: #333;
-    }
-
-    .error-container button {
-      margin-top: 20px;
-      padding: 12px 24px;
-      background: linear-gradient(90deg, #ffa83f, #ff5e25);
-      color: white;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 14px;
-      box-shadow: 0 4px 12px rgba(255, 94, 37, 0.3);
-      transition: transform 0.2s;
-    }
-
-    .error-container button:hover {
-      transform: translateY(-2px);
-    }
-
-    /* ═══════════════════════════════════════
-       TOAST NOTIFICATION
-    ═══════════════════════════════════════ */
-    .toast {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      padding: 16px 24px;
-      border-radius: 10px;
-      color: white;
-      font-weight: 600;
-      z-index: 9999;
-      opacity: 0;
-      transform: translateX(400px);
-      transition: all 0.3s ease;
-      max-width: 400px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
-
-    .toast.show {
-      opacity: 1;
-      transform: translateX(0);
-    }
-
-    .toast.success { background: #10b981; }
-    .toast.error { background: #ef4444; }
-    .toast.info { background: #3b82f6; }
-
-    /* ═══════════════════════════════════════
-       RESPONSIVE
-    ═══════════════════════════════════════ */
-    @media (max-width: 768px) {
+      /* SIDEBAR (sama seperti sebelumnya) */
       .sidebar {
-        width: 70px;
-        padding: 20px 10px;
+        width: 260px;
+        background: rgb(33, 33, 33);
+        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+        display: flex;
+        flex-direction: column;
+        padding: 30px 20px;
+        position: fixed;
+        height: 100vh;
+        z-index: 100;
       }
-
-      .logo-text, .nav span {
-        display: none;
+      .logo {
+        text-align: center;
+        margin-bottom: 40px;
       }
-
+      .logo-img {
+        width: 80px;
+        height: 80px;
+        object-fit: contain;
+      }
+      .logo-text {
+        font-size: 24px;
+        font-weight: 800;
+        background: linear-gradient(90deg, #ffa83f, #ff5e25);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-top: 10px;
+      }
       .nav {
-        justify-content: center;
-        padding: 14px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 20px;
+        margin-bottom: 8px;
+        border: none;
+        background: transparent;
+        border-radius: 12px;
+        font-size: 15px;
+        font-weight: 600;
+        color: #666;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-align: left;
+        width: 100%;
+      }
+      .nav:hover {
+        background: #fff3ed;
+        color: #ff5e25;
+      }
+      .nav.active {
+        background: linear-gradient(90deg, #ffa83f, #ff5e25);
+        color: white;
+        box-shadow: 0 4px 12px rgba(255, 94, 37, 0.3);
+      }
+      .nav i {
+        width: 20px;
+        text-align: center;
+      }
+      .logout-btn {
+        margin-top: auto;
+        background: #fff3ed;
+        color: #ff5e25;
+      }
+      .logout-btn:hover {
+        background: #ff5e25;
+        color: white;
       }
 
+      /* MAIN CONTENT — tambahkan position: relative */
       #content {
-        margin-left: 70px;
+        flex: 1;
+        margin-left: 260px;
+        padding: 0;
+        min-height: 100vh;
+        background: #f5f5f5;
+        position: relative; /* ⬅️ PENTING: buat bottom-sheet di menu.html */
       }
-    }
-  </style>
-</head>
 
-<body>
-  <div class="container">
-    <!-- SIDEBAR -->
-    <aside class="sidebar">
-      <div class="logo">
-        <img src="../images/assets/logo.png" class="logo-img" onerror="this.style.display='none'" />
-        <div class="logo-text">Chick on Cup</div>
-      </div>
-
-      <button class="nav active" data-page="pages/order.html" onclick="loadPage('pages/order.html', this)">
-        <i class="fas fa-clipboard-list"></i>
-        <span>Pesanan</span>
-      </button>
-
-      <button class="nav" data-page="pages/menu.html" onclick="loadPage('pages/menu.html', this)">
-        <i class="fas fa-utensils"></i>
-        <span>Menu</span>
-      </button>
-
-      <button class="nav logout-btn" onclick="handleLogout()">
-        <i class="fas fa-sign-out-alt"></i>
-        <span>Logout</span>
-      </button>
-    </aside>
-
-    <!-- MAIN CONTENT -->
-    <main id="content">
-      <div class="loading-container">
-        <div class="loading-spinner"></div>
-        <p>Memuat dashboard...</p>
-      </div>
-    </main>
-  </div>
-
-  <!-- TOAST -->
-  <div class="toast" id="toast"></div>
-
-  <!-- Load config.js DULU (sebelum load halaman) -->
-  <script src="js/config.js"></script>
-
-  <script>
-    // ═══════════════════════════════════════
-    // AUTH CHECK
-    // ═══════════════════════════════════════
-    document.addEventListener('DOMContentLoaded', function() {
-      if (!requireAuth()) {
-        return;
+      /* Loading & Error state (sama) */
+      .loading-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 400px;
+        color: #999;
       }
-      
-      // Load halaman default (order)
-      loadPage('pages/order.html', document.querySelector('.nav.active'));
-    });
+      .loading-spinner {
+        width: 50px;
+        height: 50px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #ff5e25;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 20px;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      .error-container {
+        text-align: center;
+        padding: 60px 20px;
+        color: #666;
+      }
+      .error-container i {
+        font-size: 64px;
+        color: #ff5e25;
+        margin-bottom: 20px;
+      }
+      .error-container h2 {
+        margin-bottom: 10px;
+        color: #333;
+      }
+      .error-container button {
+        margin-top: 20px;
+        padding: 12px 24px;
+        background: linear-gradient(90deg, #ffa83f, #ff5e25);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 16px 24px;
+        border-radius: 10px;
+        color: white;
+        font-weight: 600;
+        z-index: 9999;
+        opacity: 0;
+        transform: translateX(400px);
+        transition: all 0.3s ease;
+        max-width: 400px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+      .toast.show {
+        opacity: 1;
+        transform: translateX(0);
+      }
+      .toast.success {
+        background: #10b981;
+      }
+      .toast.error {
+        background: #ef4444;
+      }
+      .toast.info {
+        background: #3b82f6;
+      }
 
-    // ═══════════════════════════════════════
-    // LOAD PAGE (DYNAMIC)
-    // ═══════════════════════════════════════
-    async function loadPage(pageUrl, navElement) {
-      const content = document.getElementById('content');
-      
-      // Tampilkan loading
-      content.innerHTML = `
+      @media (max-width: 768px) {
+        .sidebar {
+          width: 70px;
+          padding: 20px 10px;
+        }
+        .logo-text,
+        .nav span {
+          display: none;
+        }
+        .nav {
+          justify-content: center;
+          padding: 14px;
+        }
+        #content {
+          margin-left: 70px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <aside class="sidebar">
+        <div class="logo">
+          <img
+            src="images/assets/logo.png"
+            class="logo-img"
+            onerror="this.style.display = 'none'"
+          />
+          <div class="logo-text">Chick on Cup</div>
+        </div>
+        <button
+          class="nav active"
+          data-page="pages/order.html"
+          onclick="loadPage('pages/order.html', this)"
+        >
+          <i class="fas fa-clipboard-list"></i><span>Pesanan</span>
+        </button>
+        <button
+          class="nav"
+          data-page="pages/menu.html"
+          onclick="loadPage('pages/menu.html', this)"
+        >
+          <i class="fas fa-utensils"></i><span>Menu</span>
+        </button>
+        <button class="nav logout-btn" onclick="handleLogout()">
+          <i class="fas fa-sign-out-alt"></i><span>Logout</span>
+        </button>
+      </aside>
+
+      <main id="content">
+        <div class="loading-container">
+          <div class="loading-spinner"></div>
+          <p>Memuat dashboard...</p>
+        </div>
+      </main>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="js/config.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        if (!requireAuth()) return;
+        loadPage("pages/order.html", document.querySelector(".nav.active"));
+      });
+
+      async function loadPage(pageUrl, navElement) {
+        const content = document.getElementById("content");
+
+        // ✅ CLEANUP halaman sebelumnya (clear interval, dsb)
+        if (typeof window.cleanupCurrentPage === "function") {
+          try {
+            window.cleanupCurrentPage();
+          } catch (e) {
+            console.warn(e);
+          }
+          window.cleanupCurrentPage = null;
+        }
+
+        content.innerHTML = `
         <div class="loading-container">
           <div class="loading-spinner"></div>
           <p>Memuat halaman...</p>
-        </div>
-      `;
-      
-      // Update active state
-      document.querySelectorAll('.nav').forEach(nav => nav.classList.remove('active'));
-      if (navElement) {
-        navElement.classList.add('active');
-      }
-      
-      try {
-        const response = await fetch(pageUrl);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        let html = await response.text();
-        
-        // ✅ STRIP: Hapus <script src="..."> yang path-nya relatif
-        // Karena config.js sudah di-load dari index.html
-        html = html.replace(/<script\s+src=["']\.\.\/js\/config\.js["']><\/script>/gi, '');
-        html = html.replace(/<script\s+src=["']\.\.\/js\/app\.js["']><\/script>/gi, '');
-        
-        // ✅ STRIP: Hapus <!DOCTYPE>, <html>, <head>, <body> tags
-        // Karena halaman sudah di-embed dalam index.html
-        html = html.replace(/<!DOCTYPE[^>]*>/gi, '');
-        html = html.replace(/<\/?html[^>]*>/gi, '');
-        html = html.replace(/<\/?head[^>]*>/gi, '');
-        html = html.replace(/<\/?body[^>]*>/gi, '');
-        
-        // ✅ STRIP: Hapus <link> dan <style> yang duplikat
-        // Tapi pertahankan <style> yang spesifik untuk halaman
-        html = html.replace(/<link[^>]*rel=["']stylesheet["'][^>]*href=["']\.\.\/css\/main\.css["'][^>]*>/gi, '');
-        
-        // ✅ STRIP: Hapus <title> tag
-        html = html.replace(/<title[^>]*>.*?<\/title>/gi, '');
-        
-        // Inject HTML ke content area
-        content.innerHTML = html;
-        
-        // ✅ RE-INJECT: Execute inline scripts
-        const scripts = content.querySelectorAll('script:not([src])');
-        scripts.forEach(oldScript => {
-          const newScript = document.createElement('script');
-          
-          // Copy attributes
-          Array.from(oldScript.attributes).forEach(attr => {
-            newScript.setAttribute(attr.name, attr.value);
+        </div>`;
+
+        document
+          .querySelectorAll(".nav")
+          .forEach((n) => n.classList.remove("active"));
+        if (navElement) navElement.classList.add("active");
+
+        try {
+          const response = await fetch(pageUrl);
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const html = await response.text();
+
+          // Inject HTML (partial sudah bersih, tidak perlu strip banyak tag)
+          content.innerHTML = html;
+
+          // Re-inject inline scripts biar bisa dieksekusi
+          content.querySelectorAll("script:not([src])").forEach((oldScript) => {
+            const newScript = document.createElement("script");
+            Array.from(oldScript.attributes).forEach((attr) =>
+              newScript.setAttribute(attr.name, attr.value),
+            );
+            newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+            oldScript.parentNode.replaceChild(newScript, oldScript);
           });
-          
-          // Copy content
-          newScript.appendChild(document.createTextNode(oldScript.innerHTML));
-          
-          // Replace
-          oldScript.parentNode.replaceChild(newScript, oldScript);
-        });
-        
-      } catch (error) {
-        console.error('Error loading page:', error);
-        content.innerHTML = `
+        } catch (error) {
+          console.error("Error loading page:", error);
+          content.innerHTML = `
           <div class="error-container">
             <i class="fas fa-exclamation-triangle"></i>
             <h2>Gagal memuat halaman</h2>
@@ -363,47 +301,43 @@
             <button onclick="loadPage('pages/order.html', document.querySelector('.nav[data-page=&quot;pages/order.html&quot;]'))">
               <i class="fas fa-redo"></i> Coba Lagi
             </button>
-          </div>
-        `;
+          </div>`;
+        }
       }
-    }
 
-    // ═══════════════════════════════════════
-    // LOGOUT
-    // ═══════════════════════════════════════
-    async function handleLogout() {
-      if (!confirm('Yakin ingin logout?')) {
-        return;
-      }
-      
-      try {
-        await fetchWithAuth(API_CONFIG.ENDPOINTS.LOGOUT, {
-          method: 'POST'
-        });
-      } catch (error) {
-        console.error('Logout error:', error);
-      } finally {
+      async function handleLogout() {
+        if (!confirm("Yakin ingin logout?")) return;
+
+        try {
+          // Coba panggil API logout (opsional - biar token di backend juga dihapus)
+          await fetchWithAuth(API_CONFIG.ENDPOINTS.LOGOUT, { method: "POST" });
+        } catch (e) {
+          console.warn("Logout API error (tetap lanjut):", e);
+          // Jangan return/blokir - tetap lanjut ke proses logout lokal
+        }
+
+        // ✅ PASTIKAN data auth dihapus dulu
         removeToken();
-        // ✅ FIX: Path redirect ke pages/login.html
-        window.location.href = 'pages/login.html';
+
+        // ✅ CLEAR semua state SPA
+        if (typeof window.cleanupCurrentPage === "function") {
+          try {
+            window.cleanupCurrentPage();
+          } catch (e) {}
+          window.cleanupCurrentPage = null;
+        }
+
+        // ✅ Redirect ke login (path relatif dari root)
+        window.location.href = "pages/login.html";
       }
-    }
 
-    // ═══════════════════════════════════════
-    // TOAST NOTIFICATION
-    // ═══════════════════════════════════════
-    function showToast(message, type = 'info') {
-      const toast = document.getElementById('toast');
-      toast.textContent = message;
-      toast.className = `toast ${type} show`;
-      
-      setTimeout(() => {
-        toast.classList.remove('show');
-      }, 3000);
-    }
-
-    // Expose showToast globally agar bisa dipanggil dari halaman yang di-load
-    window.showToast = showToast;
-  </script>
-</body>
+      function showToast(message, type = "info") {
+        const toast = document.getElementById("toast");
+        toast.textContent = message;
+        toast.className = `toast ${type} show`;
+        setTimeout(() => toast.classList.remove("show"), 3000);
+      }
+      window.showToast = showToast;
+    </script>
+  </body>
 </html>
