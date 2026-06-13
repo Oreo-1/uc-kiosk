@@ -4,13 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sign Up - Chick on Cup</title>
-
-    <!-- FONT AWESOME -->
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
     />
-
     <style>
       * {
         margin: 0;
@@ -18,7 +15,6 @@
         box-sizing: border-box;
         font-family: "Segoe UI", sans-serif;
       }
-
       body {
         background: #cccccc;
         min-height: 100vh;
@@ -26,7 +22,6 @@
         justify-content: center;
         align-items: center;
       }
-
       .container {
         width: 100%;
         max-width: 1000px;
@@ -35,7 +30,6 @@
         display: flex;
         overflow: hidden;
       }
-
       .left-side {
         width: 50%;
         background: linear-gradient(180deg, #ffa83f 0%, #ff5e25 100%);
@@ -45,23 +39,14 @@
         flex-direction: column;
         justify-content: center;
       }
-
-      .brand {
-        font-size: 42px;
-        font-weight: 800;
-        margin-bottom: 20px;
-      }
-
       .left-side h2 {
         font-size: 36px;
         margin-bottom: 15px;
       }
-
       .left-side p {
         font-size: 16px;
         line-height: 1.7;
       }
-
       .right-side {
         width: 50%;
         padding: 50px;
@@ -69,12 +54,10 @@
         justify-content: center;
         align-items: center;
       }
-
       .form-container {
         width: 100%;
         max-width: 360px;
       }
-
       .title {
         background: linear-gradient(90deg, #ffa83f 0%, #ff5e25 100%);
         -webkit-background-clip: text;
@@ -83,27 +66,22 @@
         font-weight: 800;
         margin-bottom: 10px;
       }
-
       .subtitle {
         color: #666;
         margin-bottom: 30px;
       }
-
       .input-group {
         margin-bottom: 18px;
       }
-
       .input-group label {
         display: block;
         margin-bottom: 8px;
         font-size: 14px;
         font-weight: 600;
       }
-
       .input-box {
         position: relative;
       }
-
       .input-box i {
         position: absolute;
         left: 15px;
@@ -111,22 +89,34 @@
         transform: translateY(-50%);
         color: #999;
       }
-
       .input-box input {
         width: 100%;
-        padding: 14px 14px 14px 45px;
+        padding: 14px 45px 14px 45px;
         border-radius: 14px;
         border: 1.5px solid #eee;
         background: #fafafa;
         outline: none;
         font-size: 14px;
       }
-
       .input-box input:focus {
         border-color: #ff8a35;
         background: white;
       }
-
+      .toggle-password {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #999;
+        cursor: pointer;
+        background: none;
+        border: none;
+        font-size: 14px;
+        padding: 5px;
+      }
+      .toggle-password:hover {
+        color: #ff5e25;
+      }
       .btn {
         width: 100%;
         padding: 14px;
@@ -138,31 +128,57 @@
         font-weight: 700;
         cursor: pointer;
         margin-top: 10px;
-        transition: opacity 0.2s;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
       }
-
       .btn:hover {
         opacity: 0.9;
+        transform: translateY(-1px);
       }
-
+      .btn:active {
+        transform: translateY(0);
+      }
       .btn:disabled {
         opacity: 0.6;
         cursor: not-allowed;
+        transform: none;
       }
-
+      .btn-spinner {
+        width: 18px;
+        height: 18px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+        display: none;
+      }
+      .btn.loading .btn-spinner {
+        display: block;
+      }
+      .btn.loading .btn-text {
+        display: none;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
       .switch-text {
         margin-top: 22px;
         text-align: center;
         color: #666;
       }
-
       .switch-text a {
         color: #ff7a2f;
         text-decoration: none;
         font-weight: 700;
       }
-
-      /* ✅ TAMBAHAN: Error & Success Message Styling */
+      .switch-text a:hover {
+        text-decoration: underline;
+      }
       .error-message {
         background: #fee2e2;
         color: #dc2626;
@@ -174,11 +190,10 @@
         border-left: 4px solid #dc2626;
         white-space: pre-line;
       }
-
       .error-message.show {
         display: block;
+        animation: slideIn 0.3s ease;
       }
-
       .success-message {
         background: #d1fae5;
         color: #059669;
@@ -189,21 +204,28 @@
         display: none;
         border-left: 4px solid #059669;
       }
-
       .success-message.show {
         display: block;
+        animation: slideIn 0.3s ease;
       }
-
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
       @media (max-width: 768px) {
         .container {
           flex-direction: column;
         }
-
         .left-side,
         .right-side {
           width: 100%;
         }
-
         .left-side {
           min-height: 260px;
           text-align: center;
@@ -212,63 +234,67 @@
       }
     </style>
   </head>
-
   <body>
     <div class="container">
-      <!-- LEFT -->
       <div class="left-side">
-
         <h2>Create Account ✨</h2>
-
-        <p>
-          Daftar sekarang dan mulai pesan makanan favoritmu dengan mudah.
-        </p>
+        <p>Daftar sekarang dan mulai pesan makanan favoritmu dengan mudah.</p>
       </div>
-
-      <!-- RIGHT -->
       <div class="right-side">
         <div class="form-container">
           <div class="title">Sign Up</div>
-
-          <div class="subtitle">
-            Create your new account
-          </div>
-
-          <!-- ✅ TAMBAHAN: Error & Success Message -->
+          <div class="subtitle">Create your new account</div>
           <div class="error-message" id="errorMsg"></div>
           <div class="success-message" id="successMsg"></div>
-
           <form id="signupForm">
             <div class="input-group">
               <label>Nama Vendor</label>
-
               <div class="input-box">
                 <i class="fa fa-user"></i>
-                <input type="text" id="nameInput" placeholder="Masukkan nama vendor" required />
+                <input
+                  type="text"
+                  id="nameInput"
+                  placeholder="Masukkan nama vendor"
+                  required
+                  autocomplete="username"
+                />
               </div>
             </div>
-
             <div class="input-group">
               <label>Nomor Telepon</label>
-
               <div class="input-box">
                 <i class="fa fa-phone"></i>
-                <input type="tel" id="phoneInput" placeholder="Masukkan nomor telepon" required />
+                <input
+                  type="tel"
+                  id="phoneInput"
+                  placeholder="Masukkan nomor telepon"
+                  required
+                  autocomplete="tel"
+                />
               </div>
             </div>
-
             <div class="input-group">
               <label>Password</label>
-
               <div class="input-box">
                 <i class="fa fa-lock"></i>
-                <input type="password" id="passwordInput" placeholder="Masukkan password" required />
+                <input
+                  type="password"
+                  id="passwordInput"
+                  placeholder="Masukkan password"
+                  required
+                  autocomplete="new-password"
+                />
+                <button
+                  type="button"
+                  class="toggle-password"
+                  onclick="togglePassword('passwordInput', this)"
+                >
+                  <i class="fa fa-eye"></i>
+                </button>
               </div>
             </div>
-
             <div class="input-group">
               <label>Konfirmasi Password</label>
-
               <div class="input-box">
                 <i class="fa fa-lock"></i>
                 <input
@@ -276,154 +302,169 @@
                   id="confirmPasswordInput"
                   placeholder="Konfirmasi password"
                   required
+                  autocomplete="new-password"
                 />
+                <button
+                  type="button"
+                  class="toggle-password"
+                  onclick="togglePassword('confirmPasswordInput', this)"
+                >
+                  <i class="fa fa-eye"></i>
+                </button>
               </div>
             </div>
-
-            <button type="submit" class="btn" id="signupBtn">Create Account</button>
+            <button type="submit" class="btn" id="signupBtn">
+              <div class="btn-spinner"></div>
+              <span class="btn-text">Create Account</span>
+            </button>
           </form>
-
           <div class="switch-text">
-            Sudah punya akun?
-            <a href="login.html">Login</a>
+            Sudah punya akun? <a href="login.html">Login</a>
           </div>
         </div>
       </div>
     </div>
-
-    <!-- Load config.js terlebih dahulu -->
     <script src="../js/config.js"></script>
-    
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Jika sudah login, langsung redirect ke dashboard
+      document.addEventListener("DOMContentLoaded", function () {
         if (isAuthenticated()) {
-            window.location.href = '../index.html';
-            return;
+          window.location.href = "../index.html";
+          return;
         }
 
-        const form = document.getElementById('signupForm');
-        const nameInput = document.getElementById('nameInput');
-        const phoneInput = document.getElementById('phoneInput');
-        const passwordInput = document.getElementById('passwordInput');
-        const confirmPasswordInput = document.getElementById('confirmPasswordInput');
-        const signupBtn = document.getElementById('signupBtn');
-        const errorMsg = document.getElementById('errorMsg');
-        const successMsg = document.getElementById('successMsg');
+        const form = document.getElementById("signupForm");
+        const nameInput = document.getElementById("nameInput");
+        const phoneInput = document.getElementById("phoneInput");
+        const passwordInput = document.getElementById("passwordInput");
+        const confirmPasswordInput = document.getElementById(
+          "confirmPasswordInput",
+        );
+        const signupBtn = document.getElementById("signupBtn");
+        const errorMsg = document.getElementById("errorMsg");
+        const successMsg = document.getElementById("successMsg");
 
-        // Helper untuk tampilkan error
+        nameInput.focus();
+
         function showError(message) {
-            errorMsg.textContent = message;
-            errorMsg.classList.add('show');
-            successMsg.classList.remove('show');
+          errorMsg.textContent = message;
+          errorMsg.classList.add("show");
+          successMsg.classList.remove("show");
         }
 
-        // Helper untuk tampilkan success
         function showSuccess(message) {
-            successMsg.textContent = message;
-            successMsg.classList.add('show');
-            errorMsg.classList.remove('show');
+          successMsg.textContent = message;
+          successMsg.classList.add("show");
+          errorMsg.classList.remove("show");
         }
 
-        // Helper untuk sembunyikan semua pesan
         function hideMessages() {
-            errorMsg.classList.remove('show');
-            successMsg.classList.remove('show');
+          errorMsg.classList.remove("show");
+          successMsg.classList.remove("show");
         }
 
-        form.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            hideMessages();
-            
-            const name = nameInput.value.trim();
-            const phone_number = phoneInput.value.trim();
-            const password = passwordInput.value;
-            const confirmPassword = confirmPasswordInput.value;
+        form.addEventListener("submit", async function (e) {
+          e.preventDefault();
+          hideMessages();
 
-            // Validasi client-side
-            if (!name || !phone_number || !password || !confirmPassword) {
-                showError('Mohon isi semua field!');
-                return;
+          const name = nameInput.value.trim();
+          const phone_number = phoneInput.value.trim();
+          const password = passwordInput.value;
+          const confirmPassword = confirmPasswordInput.value;
+
+          if (!name || !phone_number || !password || !confirmPassword) {
+            showError("Mohon isi semua field!");
+            return;
+          }
+
+          if (password.length < 6) {
+            showError("Password minimal 6 karakter!");
+            return;
+          }
+
+          if (password !== confirmPassword) {
+            showError("Password tidak cocok!");
+            return;
+          }
+
+          const phoneRegex = /^[0-9+\-\s()]{8,20}$/;
+          if (!phoneRegex.test(phone_number)) {
+            showError("Format nomor telepon tidak valid!");
+            return;
+          }
+
+          signupBtn.disabled = true;
+          signupBtn.classList.add("loading");
+
+          try {
+            const response = await fetch(
+              `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.REGISTER}`,
+              {
+                method: "POST",
+                headers: {
+                  Accept: "application/json",
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ name, phone_number, password }),
+              },
+            );
+
+            const data = await response.json();
+
+            if (response.ok && data.success && data.data && data.data.token) {
+              setToken(data.data.token);
+              setVendorData(data.data.vendor);
+              showSuccess(
+                "Registrasi berhasil! Selamat datang di Chick on Cup. Mengalihkan...",
+              );
+
+              setTimeout(() => {
+                window.location.href = "../index.html";
+              }, 1500);
+            } else {
+              if (data.errors) {
+                const errorMessages = Object.values(data.errors)
+                  .flat()
+                  .join("\n");
+                showError(errorMessages);
+              } else {
+                showError(
+                  data.message || "Registrasi gagal! Silakan coba lagi.",
+                );
+              }
+              console.error("Register failed:", data);
             }
-
-            if (password.length < 6) {
-                showError('Password minimal 6 karakter!');
-                return;
-            }
-
-            if (password !== confirmPassword) {
-                showError('Password tidak cocok!');
-                return;
-            }
-
-            // Validasi format nomor telepon (opsional)
-            const phoneRegex = /^[0-9+\-\s()]{8,20}$/;
-            if (!phoneRegex.test(phone_number)) {
-                showError('Format nomor telepon tidak valid!');
-                return;
-            }
-
-            // Disable button & tampilkan loading
-            signupBtn.disabled = true;
-            const originalText = signupBtn.innerText;
-            signupBtn.innerText = 'Memproses...';
-
-            try {
-                // Panggil endpoint register
-                const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.REGISTER}`, {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        name: name,
-                        phone_number: phone_number,
-                        password: password
-                    })
-                });
-
-                const data = await response.json();
-
-                // ✅ PERBAIKAN: Validasi response lebih ketat
-                if (response.ok && data.success && data.data && data.data.token) {
-                    // Simpan token & data vendor ke localStorage
-                    setToken(data.data.token);
-                    setVendorData(data.data.vendor);
-                    
-                    showSuccess('Registrasi berhasil! Selamat datang di Chick on Cup. Mengalihkan...');
-                    
-                    // Redirect ke dashboard setelah 1.5 detik
-                    setTimeout(() => {
-                        window.location.href = '../index.html';
-                    }, 1500);
-                } else {
-                    // Tampilkan error dari backend
-                    if (data.errors) {
-                        // Format validation errors dengan rapi
-                        const errorMessages = Object.values(data.errors).flat().join('\n');
-                        showError(errorMessages);
-                    } else {
-                        showError(data.message || 'Registrasi gagal! Silakan coba lagi.');
-                    }
-                    console.error('Register failed:', data);
-                }
-            } catch (error) {
-                console.error('Register error:', error);
-                showError('Terjadi kesalahan koneksi. Pastikan backend sudah berjalan.');
-            } finally {
-                // Kembalikan button ke state semula
-                signupBtn.disabled = false;
-                signupBtn.innerText = originalText;
-            }
+          } catch (error) {
+            console.error("Register error:", error);
+            showError(
+              error.message ||
+                "Terjadi kesalahan koneksi. Pastikan backend sudah berjalan.",
+            );
+          } finally {
+            signupBtn.disabled = false;
+            signupBtn.classList.remove("loading");
+          }
         });
 
-        // ✅ TAMBAHAN: Clear error saat user mulai mengetik
-        nameInput.addEventListener('input', hideMessages);
-        phoneInput.addEventListener('input', hideMessages);
-        passwordInput.addEventListener('input', hideMessages);
-        confirmPasswordInput.addEventListener('input', hideMessages);
-    });
+        nameInput.addEventListener("input", hideMessages);
+        phoneInput.addEventListener("input", hideMessages);
+        passwordInput.addEventListener("input", hideMessages);
+        confirmPasswordInput.addEventListener("input", hideMessages);
+      });
+
+      function togglePassword(inputId, btn) {
+        const input = document.getElementById(inputId);
+        const icon = btn.querySelector("i");
+
+        if (input.type === "password") {
+          input.type = "text";
+          icon.classList.remove("fa-eye");
+          icon.classList.add("fa-eye-slash");
+        } else {
+          input.type = "password";
+          icon.classList.remove("fa-eye-slash");
+          icon.classList.add("fa-eye");
+        }
+      }
     </script>
   </body>
 </html>

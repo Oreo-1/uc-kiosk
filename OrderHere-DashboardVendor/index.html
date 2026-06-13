@@ -3,13 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dashboard Chick on Cup</title>
-
+    <title>Chick on Cup - Dashboard</title>
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
     />
-
     <style>
       * {
         margin: 0;
@@ -17,111 +15,329 @@
         box-sizing: border-box;
         font-family: "Segoe UI", sans-serif;
       }
-
       body {
-        display: flex;
         background: #f5f5f5;
+        min-height: 100vh;
+        display: flex;
+      }
+      .container {
+        display: flex;
+        width: 100%;
+        min-height: 100vh;
       }
 
+      /* SIDEBAR (sama seperti sebelumnya) */
       .sidebar {
         width: 260px;
-        height: 100vh;
-        position: fixed;
-        background: #fff;
-        padding: 20px;
+        background: rgb(33, 33, 33);
         box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+        display: flex;
+        flex-direction: column;
+        padding: 30px 20px;
+        position: fixed;
+        height: 100vh;
+        z-index: 100;
       }
-
+      .logo {
+        text-align: center;
+        margin-bottom: 40px;
+      }
+      .logo-img {
+        width: 80px;
+        height: 80px;
+        object-fit: contain;
+      }
+      .logo-text {
+        font-size: 24px;
+        font-weight: 800;
+        background: linear-gradient(90deg, #ffa83f, #ff5e25);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-top: 10px;
+      }
       .nav {
-        display: block;
-        padding: 12px;
-        margin: 8px 0;
-        cursor: pointer;
-        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 20px;
+        margin-bottom: 8px;
+        border: none;
         background: transparent;
+        border-radius: 12px;
+        font-size: 15px;
+        font-weight: 600;
+        color: #666;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-align: left;
+        width: 100%;
       }
-
+      .nav:hover {
+        background: #fff3ed;
+        color: #ff5e25;
+      }
       .nav.active {
+        background: linear-gradient(90deg, #ffa83f, #ff5e25);
+        color: white;
+        box-shadow: 0 4px 12px rgba(255, 94, 37, 0.3);
+      }
+      .nav i {
+        width: 20px;
+        text-align: center;
+      }
+      .logout-btn {
+        margin-top: auto;
+        background: #fff3ed;
+        color: #ff5e25;
+      }
+      .logout-btn:hover {
         background: #ff5e25;
         color: white;
       }
 
+      /* MAIN CONTENT — tambahkan position: relative */
       #content {
+        flex: 1;
         margin-left: 260px;
-        width: 100%;
-        padding: 20px;
+        padding: 0;
+        min-height: 100vh;
+        background: #f5f5f5;
+        position: relative; /* ⬅️ PENTING: buat bottom-sheet di menu.html */
       }
 
+      /* Loading & Error state (sama) */
       .loading-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 400px;
+        color: #999;
+      }
+      .loading-spinner {
+        width: 50px;
+        height: 50px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #ff5e25;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 20px;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      .error-container {
         text-align: center;
-        padding: 40px;
+        padding: 60px 20px;
+        color: #666;
+      }
+      .error-container i {
+        font-size: 64px;
+        color: #ff5e25;
+        margin-bottom: 20px;
+      }
+      .error-container h2 {
+        margin-bottom: 10px;
+        color: #333;
+      }
+      .error-container button {
+        margin-top: 20px;
+        padding: 12px 24px;
+        background: linear-gradient(90deg, #ffa83f, #ff5e25);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 16px 24px;
+        border-radius: 10px;
+        color: white;
+        font-weight: 600;
+        z-index: 9999;
+        opacity: 0;
+        transform: translateX(400px);
+        transition: all 0.3s ease;
+        max-width: 400px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+      .toast.show {
+        opacity: 1;
+        transform: translateX(0);
+      }
+      .toast.success {
+        background: #10b981;
+      }
+      .toast.error {
+        background: #ef4444;
+      }
+      .toast.info {
+        background: #3b82f6;
+      }
+
+      @media (max-width: 768px) {
+        .sidebar {
+          width: 70px;
+          padding: 20px 10px;
+        }
+        .logo-text,
+        .nav span {
+          display: none;
+        }
+        .nav {
+          justify-content: center;
+          padding: 14px;
+        }
+        #content {
+          margin-left: 70px;
+        }
       }
     </style>
   </head>
-
   <body>
-    <!-- SIDEBAR -->
-    <div class="sidebar">
-      <button class="nav active" onclick="loadPage('pages/order.html', this)">
-        📄 Pesanan
-      </button>
+    <div class="container">
+      <aside class="sidebar">
+        <div class="logo">
+          <img
+            src="images/assets/logo.png"
+            class="logo-img"
+            onerror="this.style.display = 'none'"
+          />
+          <div class="logo-text">Chick on Cup</div>
+        </div>
+        <button
+          class="nav active"
+          data-page="pages/order.html"
+          onclick="loadPage('pages/order.html', this)"
+        >
+          <i class="fas fa-clipboard-list"></i><span>Pesanan</span>
+        </button>
+        <button
+          class="nav"
+          data-page="pages/menu.html"
+          onclick="loadPage('pages/menu.html', this)"
+        >
+          <i class="fas fa-utensils"></i><span>Menu</span>
+        </button>
+        <button class="nav logout-btn" onclick="handleLogout()">
+          <i class="fas fa-sign-out-alt"></i><span>Logout</span>
+        </button>
+      </aside>
 
-      <button class="nav" onclick="loadPage('pages/menu.html', this)">
-        📖 Menu
-      </button>
-
-      <button class="nav" onclick="logout()">🚪 Logout</button>
+      <main id="content">
+        <div class="loading-container">
+          <div class="loading-spinner"></div>
+          <p>Memuat dashboard...</p>
+        </div>
+      </main>
     </div>
 
-    <!-- CONTENT -->
-    <div id="content">
-      <div class="loading-container">Loading...</div>
-    </div>
+    <div class="toast" id="toast"></div>
 
     <script src="js/config.js"></script>
-
     <script>
-      // AUTH CHECK (ONLY HERE)
-      if (!requireAuth()) {
-        window.location.href = "/pages/login.html";
-      }
+      document.addEventListener("DOMContentLoaded", function () {
+        if (!requireAuth()) return;
+        loadPage("pages/order.html", document.querySelector(".nav.active"));
+      });
 
-      async function loadPage(page, el) {
+      async function loadPage(pageUrl, navElement) {
+        const content = document.getElementById("content");
+
+        // ✅ CLEANUP halaman sebelumnya (clear interval, dsb)
+        if (typeof window.cleanupCurrentPage === "function") {
+          try {
+            window.cleanupCurrentPage();
+          } catch (e) {
+            console.warn(e);
+          }
+          window.cleanupCurrentPage = null;
+        }
+
+        content.innerHTML = `
+        <div class="loading-container">
+          <div class="loading-spinner"></div>
+          <p>Memuat halaman...</p>
+        </div>`;
+
         document
           .querySelectorAll(".nav")
           .forEach((n) => n.classList.remove("active"));
-        if (el) el.classList.add("active");
+        if (navElement) navElement.classList.add("active");
 
-        const content = document.getElementById("content");
+        try {
+          const response = await fetch(pageUrl);
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const html = await response.text();
 
-        content.innerHTML = "Loading...";
+          // Inject HTML (partial sudah bersih, tidak perlu strip banyak tag)
+          content.innerHTML = html;
 
-        const res = await fetch(page);
-        let html = await res.text();
-
-        html = html
-          .replace(/<!DOCTYPE[^>]*>/gi, "")
-          .replace(/<\/?html[^>]*>/gi, "")
-          .replace(/<\/?head[^>]*>/gi, "")
-          .replace(/<\/?body[^>]*>/gi, "");
-
-        content.innerHTML = html;
-
-        // run scripts
-        content.querySelectorAll("script").forEach((old) => {
-          const s = document.createElement("script");
-          s.text = old.textContent;
-          old.replaceWith(s);
-        });
+          // Re-inject inline scripts biar bisa dieksekusi
+          content.querySelectorAll("script:not([src])").forEach((oldScript) => {
+            const newScript = document.createElement("script");
+            Array.from(oldScript.attributes).forEach((attr) =>
+              newScript.setAttribute(attr.name, attr.value),
+            );
+            newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+            oldScript.parentNode.replaceChild(newScript, oldScript);
+          });
+        } catch (error) {
+          console.error("Error loading page:", error);
+          content.innerHTML = `
+          <div class="error-container">
+            <i class="fas fa-exclamation-triangle"></i>
+            <h2>Gagal memuat halaman</h2>
+            <p>${error.message}</p>
+            <button onclick="loadPage('pages/order.html', document.querySelector('.nav[data-page=&quot;pages/order.html&quot;]'))">
+              <i class="fas fa-redo"></i> Coba Lagi
+            </button>
+          </div>`;
+        }
       }
 
-      function logout() {
+      async function handleLogout() {
+        if (!confirm("Yakin ingin logout?")) return;
+
+        try {
+          // Coba panggil API logout (opsional - biar token di backend juga dihapus)
+          await fetchWithAuth(API_CONFIG.ENDPOINTS.LOGOUT, { method: "POST" });
+        } catch (e) {
+          console.warn("Logout API error (tetap lanjut):", e);
+          // Jangan return/blokir - tetap lanjut ke proses logout lokal
+        }
+
+        // ✅ PASTIKAN data auth dihapus dulu
         removeToken();
-        window.location.href = "/pages/login.html";
+
+        // ✅ CLEAR semua state SPA
+        if (typeof window.cleanupCurrentPage === "function") {
+          try {
+            window.cleanupCurrentPage();
+          } catch (e) {}
+          window.cleanupCurrentPage = null;
+        }
+
+        // ✅ Redirect ke login (path relatif dari root)
+        window.location.href = "pages/login.html";
       }
 
-      // default page
-      loadPage("pages/order.html", document.querySelector(".nav"));
+      function showToast(message, type = "info") {
+        const toast = document.getElementById("toast");
+        toast.textContent = message;
+        toast.className = `toast ${type} show`;
+        setTimeout(() => toast.classList.remove("show"), 3000);
+      }
+      window.showToast = showToast;
     </script>
   </body>
 </html>

@@ -3,36 +3,23 @@
 // ═══════════════════════════════════════════════════════════════
 
 const API_CONFIG = {
-  // ✅ GANTI dengan IP/domain backend kamu
   BASE_URL: "http://103.185.52.14/api",
-  // Atau kalau pakai DuckDNS:
-  // BASE_URL: 'http://universitasciputraorderhere.duckdns.org/api',
-
   ENDPOINTS: {
-    // ── AUTH ──────────────────────────────────────────
     LOGIN: "/vendor/login",
     REGISTER: "/vendor/register",
     LOGOUT: "/vendor/logout",
     ME: "/vendor/me",
-
-    // ── FOODS (PUBLIC) ────────────────────────────────
-    FOODS: "/foods", // GET semua foods
-    FOODS_BY_VENDOR: "/vendors", // + /{vendor_id}/foods
-    FOOD_DETAIL: "/foods", // + /{id}
-
-    // ── FOODS (AUTH REQUIRED) ─────────────────────────
-    FOOD_CREATE: "/foods", // POST
-    FOOD_UPDATE: "/foods", // PUT/PATCH + /{id}
-    FOOD_DELETE: "/foods", // DELETE + /{id}
-    FOOD_ADD_ADDON: "/foods", // POST + /{id}/addons
-
-    // ── ORDERS ────────────────────────────────────────
-    ORDERS: "/vendor/orders", // GET (untuk vendor lihat order sendiri)
-    ORDER_DETAIL: "/orders", // GET + /{id}
-    ORDER_UPDATE_STATUS: "/orders", // PATCH + /{id}/status
-    ORDER_CREATE: "/orders", // POST (public - untuk customer)
-
-    // ── PAYMENT ───────────────────────────────────────
+    FOODS: "/foods",
+    FOODS_BY_VENDOR: "/vendors",
+    FOOD_DETAIL: "/foods",
+    FOOD_CREATE: "/foods",
+    FOOD_UPDATE: "/foods",
+    FOOD_DELETE: "/foods",
+    FOOD_ADD_ADDON: "/foods",
+    ORDERS: "/vendor/orders",
+    ORDER_DETAIL: "/orders",
+    ORDER_UPDATE_STATUS: "/orders",
+    ORDER_CREATE: "/orders",
     PAYMENT_CREATE: "/payment/create",
     PAYMENT_QRIS: "/payment/generate-qris",
     PAYMENT_NOTIFICATION: "/payment/notification",
@@ -73,13 +60,11 @@ function getVendorData() {
 // HELPER FUNCTIONS
 // ═══════════════════════════════════════════════════════════════
 
-// Format Rupiah
 function formatRp(amount) {
   if (!amount && amount !== 0) return "Rp. 0";
   return "Rp. " + Number(amount).toLocaleString("id-ID");
 }
 
-// Format tanggal ke Indonesia
 function formatDate(dateString) {
   const date = new Date(dateString);
   return date.toLocaleDateString("id-ID", {
@@ -91,7 +76,6 @@ function formatDate(dateString) {
   });
 }
 
-// Format tanggal singkat
 function formatDateShort(dateString) {
   const date = new Date(dateString);
   return date.toLocaleDateString("id-ID", {
@@ -102,7 +86,7 @@ function formatDateShort(dateString) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// FETCH WITH AUTH
+// FETCH WITH AUTH - IMPROVED
 // ═══════════════════════════════════════════════════════════════
 
 async function fetchWithAuth(url, options = {}) {
@@ -112,12 +96,10 @@ async function fetchWithAuth(url, options = {}) {
     ...options.headers,
   };
 
-  // Tambahkan Authorization header jika ada token
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  // Jangan set Content-Type untuk FormData (biar browser handle boundary)
   if (!(options.body instanceof FormData)) {
     headers["Content-Type"] = "application/json";
   }
@@ -129,29 +111,52 @@ async function fetchWithAuth(url, options = {}) {
 
   try {
     const response = await fetch(`${API_CONFIG.BASE_URL}${url}`, config);
+
+    // ✅ Handle network error
+    if (!response.ok && response.status === 0) {
+      throw new Error("Network error - Tidak bisa terhubung ke server");
+    }
+
     const data = await response.json();
 
-    // Handle unauthorized - redirect ke login
     if (response.status === 401) {
       removeToken();
-      window.location.href = "/pages/login.html";
-      throw new Error("Unauthorized - Silakan login kembali");
+      // ✅ Cek path untuk hindari infinite redirect
+      const currentPath = window.location.pathname;
+      if (
+        !currentPath.includes("login.html") &&
+        !currentPath.includes("signup.html")
+      ) {
+        // Kalau di index.html (root)
+        if (currentPath.endsWith("/") || currentPath.endsWith("index.html")) {
+          window.location.href = "pages/login.html";
+        } else {
+          // Kalau di dalam folder pages/
+          window.location.href = "login.html";
+        }
+      }
+      throw new Error("Sesi berakhir - Silakan login kembali");
     }
 
     return { response, data };
   } catch (error) {
     console.error("Fetch error:", error);
+
+    // ✅ Better error message untuk network error
+    if (error.message === "Failed to fetch" || error.name === "TypeError") {
+      throw new Error(
+        "Tidak bisa terhubung ke server. Periksa koneksi internet atau CORS setup.",
+      );
+    }
+
     throw error;
   }
 }
 
 // ═══════════════════════════════════════════════════════════════
-// URL BUILDER - Untuk endpoint dengan ID
+// URL BUILDER
 // ═══════════════════════════════════════════════════════════════
 
-// Contoh penggunaan:
-// buildUrl(API_CONFIG.ENDPOINTS.FOOD_DETAIL, 123) → '/foods/123'
-// buildUrl(API_CONFIG.ENDPOINTS.ORDER_UPDATE_STATUS, 456) → '/orders/456/status'
 function buildUrl(endpoint, ...params) {
   let url = endpoint;
   params.forEach((param) => {
@@ -181,7 +186,6 @@ function requireAuth() {
 // ═══════════════════════════════════════════════════════════════
 
 function showToast(message, type = "info") {
-  // Buat toast element jika belum ada
   let toast = document.getElementById("global-toast");
   if (!toast) {
     toast = document.createElement("div");
@@ -204,7 +208,6 @@ function showToast(message, type = "info") {
     document.body.appendChild(toast);
   }
 
-  // Set warna berdasarkan tipe
   const colors = {
     success: "#10b981",
     error: "#ef4444",
@@ -215,13 +218,11 @@ function showToast(message, type = "info") {
   toast.style.background = colors[type] || colors.info;
   toast.textContent = message;
 
-  // Show toast
   setTimeout(() => {
     toast.style.opacity = "1";
     toast.style.transform = "translateX(0)";
   }, 10);
 
-  // Hide after 3 seconds
   setTimeout(() => {
     toast.style.opacity = "0";
     toast.style.transform = "translateX(400px)";
@@ -262,21 +263,19 @@ async function handleLogout() {
   if (!confirm("Yakin ingin logout?")) return;
 
   try {
-    // Panggil endpoint logout di backend
     await fetchWithAuth(API_CONFIG.ENDPOINTS.LOGOUT, {
       method: "POST",
     });
   } catch (error) {
     console.error("Logout error:", error);
   } finally {
-    // Hapus token lokal
     removeToken();
-    window.location.href = "/pages/login.html";
+    window.location.href = "pages/login.html";
   }
 }
 
 // ═══════════════════════════════════════════════════════════════
-// DEBUG HELPER (untuk development)
+// DEBUG HELPER
 // ═══════════════════════════════════════════════════════════════
 
 function debugConfig() {
@@ -287,6 +286,3 @@ function debugConfig() {
   console.log("Vendor:", getVendorData());
   console.log("═══════════════════════════════════════");
 }
-
-// Jalankan debug di console (opsional)
-// debugConfig();
